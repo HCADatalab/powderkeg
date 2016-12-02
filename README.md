@@ -181,7 +181,7 @@ middle of named options.
 
 ## TODO
 
-Joins, streams, dataframes...
+Streams (in progress), broadcast helpers, dataframes...
 
 ## License
 
