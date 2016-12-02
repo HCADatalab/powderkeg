@@ -21,7 +21,7 @@ Live-coding the cluster!
 
 ## Goals
 
- * Good REPL even (and especially) against a real cluster (as opposed to a local same-JVM node).
+ * Good REPL even (and especially) against a real Spark cluster (as opposed to a local same-JVM node).
  * No AOT.
  * Leveraging Clojure. 
  * Not reimplementing every Spark method.
@@ -29,6 +29,8 @@ Live-coding the cluster!
 ## Documentation
 
 ### Joining a cluster
+
+Powderkeg had been tested against standalone and YARN clusters.
 
 `(keg/connect! url)` and `(keg/disconnect!)` are meant only to be used at the repl.
 
@@ -42,7 +44,7 @@ Applications should use:
 ```
 
 ### Creating a RDD 
-Currently one can only creates a RDD from a collection (including `nil`) or another RDD.
+Currently one can only creates a RDD from a collection (including `nil`) or another RDD (either returned by a keg function or by good old interop).
 
 To add a new kind of source for RDDs, one has to extend the `RDDable` protocol.
 
@@ -67,15 +69,19 @@ RDDs can be reduced so all you have to do is call `into` on them.
 ;=> [0 1 2 3 4 5 6 7 8 9]
 ``` 
 
-However you may encounter erroneous results with some stateful transducers. To work around that either use `scomp` instead of `comp`
-to create a transducer whose reducing functions states will be correctly passed around cluster nodes. Or use `keg/into` which is really
+However you may encounter erroneous results with some stateful transducers.
+
+However if it's from a very narrow class of stateful transducers: stateful transducers which calls the underlying reducing function on completion (eg `partition-by`). Furthermore you usually don't want to perform expensive computation (and data transfer) on the driver, so most of the time the only transducers you want to use with `into` is `take`. Others tend to be best pushed into the RDD.
+
+This being said if you really have to use a "flushing" transducer then you to work around the issue by either using `scomp` instead of `comp`
+to create a transducer whose reducing functions states will be correctly passed around cluster nodes. Or by using `keg/into` which is really
 just `into` with implicit `scomp`.
 
 ```clj
 ;; Both are safe
 (into [] (keg/scomp (take 5)) (range 10))
 (keg/into [] (take 5) (range 10))
-;; in truth, take is not a problematic transducer and doesn't need to be protected but better safe than sorry.
+;; in truth, take is not a problematic transducer and doesn't need to be protected.
 
 ;; partition-by is problematic.
 (into [] (partition-by #(quot % 6)) (keg/rdd (range 20)))
@@ -86,7 +92,7 @@ just `into` with implicit `scomp`.
 => [[0 1 2 3 4 5] [6 7 8 9 10 11] [12 13 14 15 16 17] [18 19]]
 ```
 
-`scomp` is still useful if you use `reduce`, `eduction` or `transduce` instead of `keg/into`.
+`scomp` is still useful if you use `reduce`, `eduction` or `transduce` instead of `keg/into` but, again, think twice before doing that: can't you push the computation in the RDD?
 
 ### Pair RDDs
 
