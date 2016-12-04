@@ -7,7 +7,7 @@ Live-coding the cluster!
 ```clj
 (require '[powderkeg.core :as keg])
 
-(connect! "spark://macbook-pro.home:7077") ; change uri, "local[2]" can do but that's no fun...
+(keg/connect! "spark://macbook-pro.home:7077") ; change uri, "local[2]" can do but that's no fun...
 
 ; sample lifted from sparkling
 (into [] ; no collect, plain Clojure
