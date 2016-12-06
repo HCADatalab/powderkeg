@@ -4,6 +4,16 @@ Live-coding the cluster!
 
 ## Usage
 
+First, add Powderkeg and Spark to your dependencies:
+
+```clj
+:dependencies [[hcadatalab/powderkeg "0.4.0"]
+               [org.apache.spark/spark-core_2.10 "1.5.2"]
+               [org.apache.spark/spark-streaming_2.10 "1.5.2"]]
+```
+
+Then launch a repl (eg `lein repl`):
+
 ```clj
 (require '[powderkeg.core :as keg])
 
