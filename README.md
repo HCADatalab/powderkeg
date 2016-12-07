@@ -68,7 +68,7 @@ The main function of powderkeg is `rdd` which takes a source as first argument a
 ```
 
 This returns a plain `org.apache.spark.api.java.JavaRDD` instance. No wrapper. At some point it may return a scala RDD.
-Bypassing the Java api layer is underconsideration but it wouldn't change the overall design. 
+Bypassing the Java api layer is under consideration but it wouldn't change the overall design. 
 
 ### Getting results
 
@@ -79,9 +79,7 @@ RDDs can be reduced so all you have to do is call `into` on them.
 ;=> [0 1 2 3 4 5 6 7 8 9]
 ``` 
 
-However you may encounter erroneous results with some stateful transducers.
-
-However if it's from a very narrow class of stateful transducers: stateful transducers which calls the underlying reducing function on completion (eg `partition-by`). Furthermore you usually don't want to perform expensive computation (and data transfer) on the driver, so most of the time the only transducers you want to use with `into` is `take`. Others tend to be best pushed into the RDD.
+You may encounter erroneous results with some stateful transducers. However if it's from a very narrow class of stateful transducers: stateful transducers which calls the underlying reducing function on completion (eg `partition-by`). Furthermore you usually don't want to perform expensive computation (and data transfer) on the driver, so most of the time the only transducers you want to use with `into` is `take`. Others tend to be best pushed into the RDD.
 
 This being said if you really have to use a "flushing" transducer then you to work around the issue by either using `scomp` instead of `comp`
 to create a transducer whose reducing functions states will be correctly passed around cluster nodes. Or by using `keg/into` which is really
@@ -102,7 +100,7 @@ just `into` with implicit `scomp`.
 => [[0 1 2 3 4 5] [6 7 8 9 10 11] [12 13 14 15 16 17] [18 19]]
 ```
 
-`scomp` is still useful if you use `reduce`, `eduction` or `transduce` instead of `keg/into` but, again, think twice before doing that: can't you push the computation in the RDD?
+`scomp` is still useful if you use `reduce`, `eduction` or `transduce` instead of `keg/into` but, again, think twice before doing that: *can't you push the computation in the RDD*?
 
 ### Pair RDDs
 
