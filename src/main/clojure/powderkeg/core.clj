@@ -67,12 +67,17 @@
 
 (declare ^:dynamic ^:powderkeg/no-sync ^org.apache.spark.api.java.JavaSparkContext *sc*)
 
+(defn- alter-var [v f & args]
+  (if (thread-bound? v)
+        (var-set v (apply f @v args))
+        (apply alter-var-root v f args)))
+
 (defn connect!
   "Connects to a spark cluster. Closes existing connection.
    The no-arg version will uses the default settings (as set for example by spark-submit)."
   ([] (connect! nil))
   ([master-url]
-    (alter-var-root #'*sc*
+    (alter-var #'*sc*
       (fn [sc]
         (try
           (.close sc)
@@ -95,7 +100,7 @@
           (org.apache.spark.api.java.JavaSparkContext. conf))))))
 
 (defn disconnect! []
-  (alter-var-root #'*sc*
+  (alter-var #'*sc*
     (fn [sc]
       (try
         (.close sc)
