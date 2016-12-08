@@ -48,10 +48,9 @@ You can also use `./spark-submit --master spark:... --class powderkeg.repl your.
 
 Applications should use:
 
-```clj
-(binding [keg/*sc* (spark context creations goes here)]
-  (application code))
-```
+`./spark-submit --master spark:... --class powderkeg.repl your.jar your.ns/main-fn app-arg0 ...`.
+
+Where `your.ns/main-fn` is a vararg function (which receives arguments as strings) and the entry point of the application. `*sc*` will be bound.
 
 ### Creating a RDD 
 Currently one can only creates a RDD from a collection (including `nil`) or another RDD (either returned by a keg function or by good old interop).
