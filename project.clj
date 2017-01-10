@@ -4,8 +4,8 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   
-  :profiles {:provided {:dependencies [[org.apache.spark/spark-core_2.10 "1.5.2"]
-                                  [org.apache.spark/spark-streaming_2.10 "1.5.2"]]}}
+  :profiles {:provided {:dependencies [[org.apache.spark/spark-core_2.10 "2.1.0"]
+                                  [org.apache.spark/spark-streaming_2.10 "2.1.0"]]}}
   :dependencies [[org.clojure/clojure "1.7.0"]
                  
                  [net.cgrand/xforms "0.5.1"]
