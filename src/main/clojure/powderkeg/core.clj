@@ -401,7 +401,7 @@
         rdds (map ensure-scala-pair-rdd rdds)
         partitioner (org.apache.spark.Partitioner/defaultPartitioner
                       rdd (scala-seq rdds))]
-    (by-key (org.apache.spark.rdd.CoGroupedRDD. (scala-seq (cons rdd rdds)) partitioner)
+    (by-key (org.apache.spark.rdd.CoGroupedRDD. ^scala.reflect.ClassTag (scala-seq (cons rdd rdds)) partitioner)
       (map (fn [groups]
              (clj/into [] (map #(scala.collection.JavaConversions/asJavaList %)) groups))))))
 
