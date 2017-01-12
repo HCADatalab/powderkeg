@@ -134,7 +134,7 @@
                        (doseq [[ns-sym vars] vars
                                :let [ns (create-ns ns-sym)]
                                [sym [{:keys [dynamic] :as m} v]] vars]
-                         (doto ^clojure.lang.var (intern ns (with-meta sym m) v)
+                         (doto ^clojure.lang.Var (intern ns (with-meta sym m) v)
                            (.setDynamic (boolean dynamic))))))))]
         #(force (.value bc)))
       (let [bc @@last-broadcast]
