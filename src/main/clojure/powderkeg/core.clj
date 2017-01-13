@@ -407,7 +407,7 @@
              partitioner
              evidence)
       (map (fn [groups]
-             (clj/into [] (map #(scala.collection.JavaConversions/asJavaList %)) groups))))))
+             (clj/into [] (map #(scala.collection.JavaConversions/bufferAsJavaList %)) groups))))))
 
 (defmacro with-res
   "Returns a \"with-open\" inspired transducer which wraps the specified transducers (xforms) and manages the resources specified by bindings (let-style bindings).
