@@ -6,7 +6,7 @@
   
   :profiles {:provided {:dependencies [[org.apache.spark/spark-core_2.11 "2.1.0"]
                                   [org.apache.spark/spark-streaming_2.11 "2.1.0"]]}}
-  :dependencies [[org.clojure/clojure "1.7.0"]
+  :dependencies [[org.clojure/clojure "1.8.0"]
                  
                  [net.cgrand/xforms "0.5.1"]
                  
