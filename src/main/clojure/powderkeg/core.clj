@@ -93,7 +93,7 @@
             ; not spark-submitted
             (.setJars conf
               (into-array
-                (map #(str (.toURL %))
+                (map #(str (.toURI %))
                   (conj
                     (guess-all-jars-but-spark)
                     (package-env!))))))
