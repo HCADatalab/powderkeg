@@ -24,7 +24,18 @@
                (.readClassAndObject kryo input)
                (.readClassAndObject kryo input))))))
      (fn [_ ^com.esotericsoftware.kryo.Kryo kryo ^com.esotericsoftware.kryo.io.Output output coll]
-       (ser/write-map kryo output coll)))})
+       (ser/write-map kryo output coll)))
+   Class
+   (serializer
+     (fn read [_ ^com.esotericsoftware.kryo.Kryo kryo ^com.esotericsoftware.kryo.io.Input input _]
+       (let [class (some-> (.readClass kryo input) .getType)
+             is-primitive (.read input)]
+         (cond-> class
+           (and (some-> class .isPrimitive) (zero? is-primitive))
+           com.esotericsoftware.kryo.util.Util/getWrapperClass)))
+     (fn write [_ ^com.esotericsoftware.kryo.Kryo kryo ^com.esotericsoftware.kryo.io.Output output ^Class class]
+       (.writeClass kryo output class)
+       (.writeByte output (if (some-> class .isPrimitive) 1 0))))})
 
 (defn register-default-serializers [^com.esotericsoftware.kryo.Kryo kryo m]
   (doseq [[^Class class ^com.esotericsoftware.kryo.Serializer serializer] m]
