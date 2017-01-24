@@ -12,10 +12,10 @@
   [ns+syms]
   (reduce
     (fn [res [ns sym]]
-      (let [v (ns-resolve ns sym)
+      (let [v (get (ns-map ns) sym)
             m (meta v)]
         (cond-> res
-          (not (or (:macro m) (:powderkeg/no-sync m)))
+          (and (var? v) (not (or (:macro m) (:powderkeg/no-sync m))))
           (assoc-in [(symbol (ns-name ns)) sym] [(dissoc m :ns :name) @v]))))
     {}
     ns+syms))
@@ -198,7 +198,8 @@
   (binding [*out* *err*]
     (println "Counting classes.")
      (let [all-classes (.getAllLoadedClasses powderkeg.Agent/instrumentation)
-           all-dyn-classes (into-array Class (filter #(instance? clojure.lang.DynamicClassLoader (.getClassLoader %)) all-classes))]
+           _ (prn (count all-classes))
+           all-dyn-classes (into-array Class (filter #(instance? clojure.lang.DynamicClassLoader (.getClassLoader ^Class %)) all-classes))]
        (print "Retrieving bytecode of" (count all-dyn-classes) "classes dynamically defined by Clojure (out of" (count all-classes) "classes)... ")
        (.addTransformer powderkeg.Agent/instrumentation no-transform true)
        (.retransformClasses powderkeg.Agent/instrumentation all-dyn-classes)
