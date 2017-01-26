@@ -37,6 +37,8 @@
        (.writeClass kryo output class)
        (.writeByte output (if (some-> class .isPrimitive) 1 0))))})
 
+(def void-serializer (serializer (fn [_ _ _ _]) (fn [_ _ _ _])))
+
 (defn register-default-serializers [^com.esotericsoftware.kryo.Kryo kryo m]
   (doseq [[^Class class ^com.esotericsoftware.kryo.Serializer serializer] m]
     (.addDefaultSerializer kryo class serializer)))
@@ -44,6 +46,7 @@
 (defn customizer [^com.esotericsoftware.kryo.Kryo kryo]
   (doto kryo
     carb/default-registry
+    (.register Void/TYPE void-serializer)
     (register-default-serializers default-serializers)
     (.setInstantiatorStrategy (org.objenesis.strategy.StdInstantiatorStrategy.)) ; required for closures
     (.setClassLoader (.getContextClassLoader (java.lang.Thread/currentThread)))))
