@@ -120,7 +120,19 @@
    When called this fn updates vars and namespaces."
   []
   (let [f (ou/tmp-file "barrier-" ".jar")
-        {:keys [classes vars]} (ou/latest-changes!)]
+        {:keys [classes vars]} (ou/latest-changes!)
+        {vars true unfreezable-vars false}
+        (x/into {}
+          (comp
+            (x/for [[ns-sym vars] %
+                    [sym mv] vars]
+              [(kryo/freezable? mv) [ns-sym [sym mv]]])
+            (x/by-key (comp (x/by-key (x/into {})) (x/into {}))))
+          vars)]
+    (binding [*out* *err*]
+      (doseq [[ns-sym vars] unfreezable-vars
+              [sym] vars]
+        (println "Warning: can't serialize" (str "#'" ns-sym "/" sym) " it won't be sent to workers.")))
     (with-open [out (io/output-stream f)]
       (ou/jar! out {}
         (map (fn [[classname bytes]] [(str classname ".class") bytes]) classes)))

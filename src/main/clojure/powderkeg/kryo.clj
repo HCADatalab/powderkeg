@@ -54,5 +54,8 @@
 (defn freeze [x]
   (-> (org.apache.spark.SparkEnv/get) .serializer .newInstance (.serialize x (.AnyRef scala.reflect.ClassTag$/MODULE$)) .array))
 
+(defn freezable? [x]
+  (try (freeze x) true (catch Exception _ false)))
+
 (defn unfreeze [bytes]
   (-> (org.apache.spark.SparkEnv/get) .serializer .newInstance (.deserialize (java.nio.ByteBuffer/wrap bytes) (.AnyRef scala.reflect.ClassTag$/MODULE$))))
