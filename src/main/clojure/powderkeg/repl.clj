@@ -3,7 +3,7 @@
   (:require clojure.main))
 
 (defn -main [& args]
-  (let [main (first args)]
+  (let [main (some-> args first symbol)]
     (apply clojure.main/main (concat
                                (mapcat (fn [e] ["-e" (pr-str e)])
                                  ['(require '[powderkeg.core :as keg] '[net.cgrand.xforms :as x])
