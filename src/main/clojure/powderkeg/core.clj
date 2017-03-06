@@ -247,7 +247,7 @@
         df (barrier-fn (fn [it] (eduction (comp may-unmap-tuple2 xform may-map-tuple2) (iterator-seq it))))
         rdd (.mapPartitions rdd
               (reify org.apache.spark.api.java.function.FlatMapFunction ; todo: skip api.java.* go to spark
-                (call [_ it] ((df) it)))
+                (call [_ it] (.iterator ((df) it))))
               preserve-partitioning)]
     rdd))
 
