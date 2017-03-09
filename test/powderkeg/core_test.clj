@@ -10,5 +10,5 @@
 (use-fixtures :once with-local)
 
 (deftest rdd
-  (is (into [] (keg/rdd (range 10)))
-      (into [] (range 10))))
+  (is (= (into [] (keg/rdd (range 10)))
+         (into [] (range 10)))))
