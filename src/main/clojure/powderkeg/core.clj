@@ -259,7 +259,7 @@
         df (barrier-fn (fn [it] (eduction (comp may-unmap-tuple2 xform may-map-tuple2) (iterator-seq it))))
         rdd (.mapPartitions rdd
               (reify org.apache.spark.api.java.function.FlatMapFunction ; todo: skip api.java.* go to spark
-                (call [_ it] ((df) it)))
+                (call [_ it] (.iterator ((df) it))))
               preserve-partitioning)]
     rdd))
 
@@ -412,10 +412,14 @@
   (let [rdd (ensure-scala-pair-rdd rdd)
         rdds (map ensure-scala-pair-rdd rdds)
         partitioner (org.apache.spark.Partitioner/defaultPartitioner
-                      rdd (scala-seq rdds))]
-    (by-key (org.apache.spark.rdd.CoGroupedRDD. (scala-seq (cons rdd rdds)) partitioner)
+                     rdd (scala-seq rdds))
+        evidence scala.reflect.ClassTag]
+    (by-key (org.apache.spark.rdd.CoGroupedRDD.
+             ^scala.reflect.ClassTag (scala-seq (cons rdd rdds))
+             partitioner
+             evidence)
       (map (fn [groups]
-             (clj/into [] (map #(scala.collection.JavaConversions/asJavaList %)) groups))))))
+             (clj/into [] (map #(scala.collection.JavaConversions/bufferAsJavaList %)) groups))))))
 
 (defmacro with-res
   "Returns a \"with-open\" inspired transducer which wraps the specified transducers (xforms) and manages the resources specified by bindings (let-style bindings).
