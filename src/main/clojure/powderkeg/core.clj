@@ -13,6 +13,25 @@
     [clojure.core.reducers :as r]
     [net.cgrand.xforms :as x]))
 
+(defn- sig [x]
+  (cond
+    (instance? java.lang.reflect.Method x) 
+    [(.getReturnType x) (.getName x) (vec (.getParameterTypes x))]
+    (instance? java.lang.reflect.Constructor x)
+    [nil "<init>" (vec (.getParameterTypes x))]))
+
+(defn- has-class? [^Class class msig]
+  (some #(= msig (sig %)) (concat (.getMethods class) (.getConstructors class))))
+
+(defmacro ^:private compile-cond [& choices]
+	(let [x (Object.)
+	      expr
+	      (reduce (fn [_ [test expr]]
+                  (when (eval test) (reduced expr)))
+         x (partition 2 choices))]
+	  (when (= x expr)
+	    (throw (ex-info "No valid choice." {:form &form})))))
+
 (defn- all-files
   "Returns a map of relative paths (as Strings) to Files for all files (not directories) below the argument."
   [^java.io.File f]
@@ -259,7 +278,12 @@
         df (barrier-fn (fn [it] (eduction (comp may-unmap-tuple2 xform may-map-tuple2) (iterator-seq it))))
         rdd (.mapPartitions rdd
               (reify org.apache.spark.api.java.function.FlatMapFunction ; todo: skip api.java.* go to spark
-                (call [_ it] (.iterator ((df) it))))
+                (call [_ it] 
+                  (compile-cond
+                    (has-class? org.apache.spark.api.java.function.FlatMapFunction [java.util.Iterator "call" [Object]])
+                    (.iterator ((df) it))
+                    (has-class? org.apache.spark.api.java.function.FlatMapFunction [Iterable "call" [Object]])
+                    ((df) it))))
               preserve-partitioning)]
     rdd))
 
@@ -412,12 +436,17 @@
   (let [rdd (ensure-scala-pair-rdd rdd)
         rdds (map ensure-scala-pair-rdd rdds)
         partitioner (org.apache.spark.Partitioner/defaultPartitioner
-                     rdd (scala-seq rdds))
-        evidence scala.reflect.ClassTag]
-    (by-key (org.apache.spark.rdd.CoGroupedRDD.
-             ^scala.reflect.ClassTag (scala-seq (cons rdd rdds))
-             partitioner
-             evidence)
+                     rdd (scala-seq rdds))]
+    (by-key (compile-cond
+              (has-class? org.apache.spark.rdd.CoGroupedRDD [nil "<init>" [scala.collection.Seq org.apache.spark.Partitioner scala.reflect.ClassTag]] )
+              (org.apache.spark.rdd.CoGroupedRDD.
+              (scala-seq (cons rdd rdds))
+              partitioner
+              (.AnyRef scala.reflect.ClassTag$/MODULE$))
+              (has-class? org.apache.spark.rdd.CoGroupedRDD [nil "<init>" [scala.collection.Seq org.apache.spark.Partitioner]] )
+              (org.apache.spark.rdd.CoGroupedRDD.
+              (scala-seq (cons rdd rdds))
+              partitioner))
       (map (fn [groups]
              (clj/into [] (map #(scala.collection.JavaConversions/bufferAsJavaList %)) groups))))))
 
