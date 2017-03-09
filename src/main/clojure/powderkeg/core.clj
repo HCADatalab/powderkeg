@@ -24,13 +24,14 @@
   (some #(= msig (sig %)) (concat (.getMethods class) (.getConstructors class))))
 
 (defmacro ^:private compile-cond [& choices]
-	(let [x (Object.)
-	      expr
-	      (reduce (fn [_ [test expr]]
+  (let [x (Object.)
+        expr
+        (reduce (fn [_ [test expr]]
                   (when (eval test) (reduced expr)))
-         x (partition 2 choices))]
-	  (when (= x expr)
-	    (throw (ex-info "No valid choice." {:form &form})))))
+          x (partition 2 choices))]
+    (when (= x expr)
+      (throw (ex-info "No valid choice." {:form &form})))
+    expr))
 
 (defn- all-files
   "Returns a map of relative paths (as Strings) to Files for all files (not directories) below the argument."
