@@ -15,7 +15,7 @@
              :spark1.5-deps ^{:pom-scope :provided}
                         {:dependencies [[org.apache.spark/spark-core_2.10 "1.5.2"]
                                         [org.apache.spark/spark-streaming_2.10 "1.5.2"]]}}
-  :dependencies [[org.clojure/clojure "1.8.0"]
+  :dependencies [[org.clojure/clojure "1.9.0-alpha15"]
                  
                  [net.cgrand/xforms "0.5.1"]
                  
@@ -26,3 +26,4 @@
   :aot [powderkeg.repl]
   :java-source-paths ["src/main/java"]
   :source-paths ["src/main/clojure"])
+  
