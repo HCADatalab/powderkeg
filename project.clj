@@ -4,12 +4,15 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   
-  :profiles {:spark2 [^{:pom-scope :provided}
+  :profiles {:default [:spark2]
+             :spark2 [:leiningen/default :spark2-deps]
+             :spark1.5 [:leiningen/default :spark1.5-deps]
+             :spark2-deps ^{:pom-scope :provided}
                       {:dependencies [[org.apache.spark/spark-core_2.11 "2.1.0"]
-                                      [org.apache.spark/spark-streaming_2.11 "2.1.0"]]}]
-             :spark1.5 [^{:pom-scope :provided}
+                                      [org.apache.spark/spark-streaming_2.11 "2.1.0"]]}
+             :spark1.5-deps ^{:pom-scope :provided}
                         {:dependencies [[org.apache.spark/spark-core_2.10 "1.5.2"]
-                                        [org.apache.spark/spark-streaming_2.10 "1.5.2"]]}]}
+                                        [org.apache.spark/spark-streaming_2.10 "1.5.2"]]}}
   :dependencies [[org.clojure/clojure "1.8.0"]
                  
                  [net.cgrand/xforms "0.5.1"]
