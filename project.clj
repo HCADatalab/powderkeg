@@ -4,6 +4,8 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   
+  :aliases {"test-all" ["with-profile" "spark1.5:spark2" "test"]}
+  
   :profiles {:default [:spark2]
              :spark2 [:leiningen/default :spark2-deps]
              :spark1.5 [:leiningen/default :spark1.5-deps]
