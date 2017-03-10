@@ -17,3 +17,8 @@ pom.xml.asc
 .idea/
 *.iml
 *.ipr
+
+# Emacs
+*~
+\#*
+\.\#*
