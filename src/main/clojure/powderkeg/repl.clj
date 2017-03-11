@@ -11,6 +11,6 @@
                                   '(keg/connect!)
                                   (when main
                                     `(do
-                                       (require '~(symbol (namespace main)))
+                                       (require '~(namespace (symbol main)))
                                        (~main ~@(next args))))])
                                (when-not main ["-r"])))))
