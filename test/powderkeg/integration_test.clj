@@ -8,7 +8,7 @@
   (let [{:keys [exit out] :as ret} (apply sh args)]
     (when-not (zero? exit)
       (throw (Exception. (str "Problem while running '" (s/join " " args) "': " out))))
-    out))
+    (.trim out)))
 
 (defn start-master [pwd]
   (sh! "docker" "run" "-d"
