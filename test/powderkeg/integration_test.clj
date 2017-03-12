@@ -57,9 +57,9 @@
 (defn with-cluster [f]
   (let [pwd (.getAbsolutePath (java.io.File. ""))]
     (start-master pwd)
-    (Thread/sleep 4000)
+    (Thread/sleep 2000)
     (start-worker pwd)
-    (Thread/sleep 4000))
+    (Thread/sleep 2000))
   (f)
   (stop-spark "worker")
   (stop-spark "master"))
