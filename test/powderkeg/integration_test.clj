@@ -5,9 +5,9 @@
             [clojure.string :as s]))
 
 (defn sh! [& args]
-  (let [{:keys [exit out] :as ret} (apply sh args)]
+  (let [{:keys [exit out err] :as ret} (apply sh args)]
     (when-not (zero? exit)
-      (throw (Exception. (str "Problem while running '" (s/join " " args) "': " out))))
+      (throw (Exception. (str "Problem while running '" (s/join " " args) "': " out " " err))))
     (.trim out)))
 
 (defn start-master [pwd]
