@@ -11,7 +11,9 @@
     (.trim out)))
 
 (defn start-master [pwd]
-  (sh! "docker" "run" "-d"
+  (sh! "docker" "run"
+       "-d"
+       "--rm"
        "--name" "master"
        "-h" "master"
        "-p" "8080:8080"
@@ -31,7 +33,9 @@
        "-h" "master"))
 
 (defn start-worker [pwd]
-  (sh! "docker" "run" "-d"
+  (sh! "docker" "run"
+       "-d"
+       "--rm"
        "--name" "worker"
        "--link" "master"
        "-h" "worker"
@@ -50,8 +54,7 @@
        "org.apache.spark.deploy.worker.Worker" "spark://master:7077"))
 
 (defn stop-spark [instance]
-  (sh! "docker" "stop" instance)
-  (sh! "docker" "rm" instance))
+  (sh! "docker" "stop" instance))
 
 (defn with-cluster [f]
   (let [pwd (.getAbsolutePath (java.io.File. ""))]
