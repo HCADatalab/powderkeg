@@ -51,7 +51,8 @@
 
 (defn stop-spark [instance]
   (sh! "docker" "stop" instance)
-  (sh! "docker" "rm" instance))
+  (when-not (System/getenv "CIRCLECI")
+    (sh! "docker" "rm" instance)))
 
 (defn with-cluster [f]
   (let [pwd (.getAbsolutePath (java.io.File. ""))]
