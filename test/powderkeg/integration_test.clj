@@ -68,7 +68,13 @@
   (f)
   (keg/disconnect!))
 
-(use-fixtures :once with-cluster with-connection)
+(defn with-cl [f]
+  (let [cl (.getContextClassLoader (Thread/currentThread))]
+    (.setContextClassLoader (Thread/currentThread) (clojure.lang.DynamicClassLoader. cl))
+    (f)
+    (.setContextClassLoader (Thread/currentThread) cl)))
+
+(use-fixtures :once with-cluster with-cl with-connection)
 
 (deftest rdd
   (is (= (into [] (keg/rdd (range 10)))
