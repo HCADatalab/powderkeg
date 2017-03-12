@@ -10,7 +10,7 @@
       (throw (Exception. (str "Problem while running '" (s/join " " args) "': " out " " err))))
     (.trim out)))
 
-(defn start-master [pwd]
+(defn start-master [pwd version]
   (sh! "docker" "run" "-d"
        "--name" "master"
        "-h" "master"
@@ -25,12 +25,12 @@
        "-e" "SPARK_CONF_DIR=/conf"
        "-v" (str pwd "/conf/master:/conf")
        "-v" (str pwd "/data:/tmp/data")
-       "gettyimages/spark"
-       "bin/spark-class"
+       (str "gettyimages/spark:" version)
+       "/usr/spark/bin/spark-class"
        "org.apache.spark.deploy.master.Master"
        "-h" "master"))
 
-(defn start-worker [pwd]
+(defn start-worker [pwd version]
   (sh! "docker" "run" "-d"
        "--name" "worker"
        "--link" "master"
@@ -45,8 +45,8 @@
        "-e" "SPARK_WORKER_MEMORY=1g"
        "-e" "SPARK_WORKER_PORT=8881"
        "-e" "SPARK_WORKER_WEBUI_PORT=8081"
-       "gettyimages/spark"
-       "bin/spark-class"
+       (str "gettyimages/spark:" version)
+       "/usr/spark/bin/spark-class"
        "org.apache.spark.deploy.worker.Worker" "spark://master:7077"))
 
 (defn stop-spark [instance]
@@ -54,29 +54,58 @@
   (when-not (System/getenv "CIRCLECI")
     (sh! "docker" "rm" instance)))
 
-(defn with-cluster [f]
+(defmacro with-resource
+  "Setup resources and tear them down after running body.
+
+  Takes a function, which when called, will setup necessary resources,
+  and returns a function, which when called, will tear the resources down"
+  [setup & body]
+  `(let [teardown# (~setup)]
+     (try
+       (do ~@body)
+       (finally (teardown#)))))
+
+(defn start-spark [version]
   (let [pwd (.getAbsolutePath (java.io.File. ""))]
-    (start-master pwd)
+    (start-master pwd version)
     (Thread/sleep 2000)
-    (start-worker pwd)
-    (Thread/sleep 2000))
-  (f)
+    (start-worker pwd version)
+    (Thread/sleep 2000)))
+
+(defn stop-cluster []
   (stop-spark "worker")
   (stop-spark "master"))
 
-(defn with-connection [f]
-  (keg/connect! "spark://localhost:7077")
-  (f)
-  (keg/disconnect!))
+(defn spark [version]
+  (fn []
+    (start-spark version)
+    stop-cluster))
 
-(defn with-cl [f]
+(defn clojure-dynamic-classloader []
   (let [cl (.getContextClassLoader (Thread/currentThread))]
     (.setContextClassLoader (Thread/currentThread) (clojure.lang.DynamicClassLoader. cl))
-    (f)
-    (.setContextClassLoader (Thread/currentThread) cl)))
+    #(.setContextClassLoader (Thread/currentThread) cl)))
 
-(use-fixtures :once with-cluster with-cl with-connection)
+(defn keg-connection []
+  (keg/connect! "spark://localhost:7077")
+  #(keg/disconnect!))
 
-(deftest rdd
-  (is (= (into [] (keg/rdd (range 10)))
-         (range 10))))
+(deftest ^:integration rdd-spark-2.1.0
+  (with-resource
+    (spark "2.1.0-hadoop-2.7")
+    (with-resource
+      clojure-dynamic-classloader
+      (with-resource
+        keg-connection
+        (is (= (into [] (keg/rdd (range 10)))
+               (range 10)))))))
+
+(deftest ^:integration rdd-spark-1.5.2
+  (with-resource
+    (spark "1.5.2-hadoop-2.6")
+    (with-resource
+      clojure-dynamic-classloader
+      (with-resource
+        keg-connection
+        (is (= (into [] (keg/rdd (range 10)))
+               (range 10)))))))
