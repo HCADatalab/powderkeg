@@ -10,6 +10,11 @@
       (throw (Exception. (str "Problem while running '" (s/join " " args) "': " out " " err))))
     (.trim out)))
 
+(defn path-to-spark-class [version]
+  (condp = version
+    "2.1.0-hadoop-2.7" "/usr/spark-2.1.0/bin/spark-class"
+    "1.5.2-hadoop-2.6" "/usr/spark/bin/spark-class"))
+
 (defn start-master [pwd version]
   (sh! "docker" "run" "-d"
        "--name" "master"
@@ -26,7 +31,7 @@
        "-v" (str pwd "/conf/master:/conf")
        "-v" (str pwd "/data:/tmp/data")
        (str "gettyimages/spark:" version)
-       "/usr/spark/bin/spark-class"
+       (path-to-spark-class version)
        "org.apache.spark.deploy.master.Master"
        "-h" "master"))
 
@@ -46,7 +51,7 @@
        "-e" "SPARK_WORKER_PORT=8881"
        "-e" "SPARK_WORKER_WEBUI_PORT=8081"
        (str "gettyimages/spark:" version)
-       "/usr/spark/bin/spark-class"
+       (path-to-spark-class version)
        "org.apache.spark.deploy.worker.Worker" "spark://master:7077"))
 
 (defn stop-spark [instance]
