@@ -2,6 +2,8 @@
 
 Live-coding the cluster!
 
+![Circle CI status](https://circleci.com/gh/HCADatalab/powderkeg.svg?style=shield&circle-token=76b1fe0bb820896c15de59ef9c98b263ae98f59e)
+
 ## Usage
 
 First, add Powderkeg and Spark to your dependencies:
