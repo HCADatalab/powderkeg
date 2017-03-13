@@ -59,16 +59,19 @@
   (when-not (System/getenv "CIRCLECI")
     (sh! "docker" "rm" instance)))
 
-(defmacro with-resource
+(defmacro with-resources
   "Setup resources and tear them down after running body.
-
   Takes a function, which when called, will setup necessary resources,
-  and returns a function, which when called, will tear the resources down"
-  [setup & body]
-  `(let [teardown# (~setup)]
-     (try
-       (do ~@body)
-       (finally (teardown#)))))
+  and returns a function, which when called, will tear the resources down.
+
+  Can be given multiple setup functions, which are called in order"
+  [setups & body]
+  (if-some [[setup & setups] (seq setups)]
+    `(let [teardown# (~setup)]
+       (try
+         (with-resources [~@setups] ~@body)
+         (finally (teardown#))))
+    `(do ~@body)))
 
 (defn start-spark [version]
   (let [pwd (.getAbsolutePath (java.io.File. ""))]
@@ -96,21 +99,17 @@
   #(keg/disconnect!))
 
 (deftest ^:integration rdd-spark-2.1.0
-  (with-resource
-    (spark "2.1.0-hadoop-2.7")
-    (with-resource
-      clojure-dynamic-classloader
-      (with-resource
-        keg-connection
-        (is (= (into [] (keg/rdd (range 10)))
-               (range 10)))))))
+  (with-resources
+    [(spark "2.1.0-hadoop-2.7")
+     clojure-dynamic-classloader
+     keg-connection]
+    (is (= (into [] (keg/rdd (range 10)))
+           (range 10)))))
 
 (deftest ^:integration rdd-spark-1.5.2
-  (with-resource
-    (spark "1.5.2-hadoop-2.6")
-    (with-resource
-      clojure-dynamic-classloader
-      (with-resource
-        keg-connection
-        (is (= (into [] (keg/rdd (range 10)))
-               (range 10)))))))
+  (with-resources
+    [(spark "1.5.2-hadoop-2.6")
+     clojure-dynamic-classloader
+     keg-connection]
+    (is (= (into [] (keg/rdd (range 10)))
+           (range 10)))))
