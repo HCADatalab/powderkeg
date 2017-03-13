@@ -3,6 +3,8 @@ machine:
     - docker
 
 test:
+  override:
+    - lein test-all
   post:
     - lein with-profile spark2 test :only powderkeg.integration-test/rdd-spark-2.1.0
     - lein with-profile spark1.5 test :only powderkeg.integration-test/rdd-spark-1.5.2
