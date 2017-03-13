@@ -6,10 +6,19 @@ Live-coding the cluster!
 
 ## Usage
 
-First, add Powderkeg and Spark to your dependencies:
+First, add Powderkeg and Spark (1.5 to 2.1 are supported, any scala version) to your dependencies:
+
+E.g. 
 
 ```clj
-:dependencies [[hcadatalab/powderkeg "0.4.7"]
+:dependencies [[hcadatalab/powderkeg "0.5.0"]
+               [org.apache.spark/spark-core_2.11 "2.1.0"]
+               [org.apache.spark/spark-streaming_2.11 "2.1.0"]]
+```
+or
+
+```clj
+:dependencies [[hcadatalab/powderkeg "0.5.0"]
                [org.apache.spark/spark-core_2.10 "1.5.2"]
                [org.apache.spark/spark-streaming_2.10 "1.5.2"]]
 ```
@@ -200,7 +209,7 @@ Streams (in progress), broadcast helpers, dataframes...
 
 ## License
 
-Copyright © 2015-2016 HCA
+Copyright © 2015-2017 HCA
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.
