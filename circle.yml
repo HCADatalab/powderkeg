@@ -1,4 +1,6 @@
 machine:
+  hosts:
+    master: 127.0.0.1
   services:
     - docker
 
