@@ -17,7 +17,7 @@
 
 (defn start-master [pwd version]
   (sh! "docker" "run" "-d"
-       "--name" "master"
+       "--name" (str "master-" version)
        "-h" "master"
        "-p" "8080:8080"
        "-p" "7077:7077"
@@ -37,8 +37,8 @@
 
 (defn start-worker [pwd version]
   (sh! "docker" "run" "-d"
-       "--name" "worker"
-       "--link" "master"
+       "--name" (str "worker-" version)
+       "--link" (str "master-" version)
        "-h" "worker"
        "--expose" "7012-7016"
        "--expose" "8881"
@@ -80,14 +80,14 @@
     (start-worker pwd version)
     (Thread/sleep 2000)))
 
-(defn stop-cluster []
-  (stop-spark "worker")
-  (stop-spark "master"))
+(defn stop-cluster [version]
+  (stop-spark (str "worker-" version))
+  (stop-spark (str "master-" version)))
 
 (defn spark [version]
   (fn []
     (start-spark version)
-    stop-cluster))
+    #(stop-cluster version)))
 
 (defn clojure-dynamic-classloader []
   (let [cl (.getContextClassLoader (Thread/currentThread))]
