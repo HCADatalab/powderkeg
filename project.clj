@@ -26,4 +26,5 @@
                  [com.cemerick/pomegranate "0.3.0"]]
   :aot [powderkeg.repl]
   :java-source-paths ["src/main/java"]
-  :source-paths ["src/main/clojure"])
+  :source-paths ["src/main/clojure"]
+  :target-path "target/%s/")
