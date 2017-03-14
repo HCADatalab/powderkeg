@@ -95,8 +95,9 @@
     #(.setContextClassLoader (Thread/currentThread) cl)))
 
 (defn keg-connection [host]
-  (keg/connect! (str "spark://" host ":7077"))
-  #(keg/disconnect!))
+  (fn []
+    (keg/connect! (str "spark://" host ":7077"))
+    #(keg/disconnect!)))
 
 (deftest ^:integration rdd-spark-2.1.0
   (with-resources
