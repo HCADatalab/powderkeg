@@ -94,15 +94,15 @@
     (.setContextClassLoader (Thread/currentThread) (clojure.lang.DynamicClassLoader. cl))
     #(.setContextClassLoader (Thread/currentThread) cl)))
 
-(defn keg-connection []
-  (keg/connect! "spark://localhost:7077")
+(defn keg-connection [host]
+  (keg/connect! (str "spark://" host ":7077"))
   #(keg/disconnect!))
 
 (deftest ^:integration rdd-spark-2.1.0
   (with-resources
     [(spark "2.1.0-hadoop-2.7")
      clojure-dynamic-classloader
-     keg-connection]
+     (keg-connection "localhost")]
     (is (= (into [] (keg/rdd (range 10)))
            (range 10)))))
 
@@ -110,6 +110,6 @@
   (with-resources
     [(spark "1.5.2-hadoop-2.6")
      clojure-dynamic-classloader
-     keg-connection]
+     (keg-connection "master")]
     (is (= (into [] (keg/rdd (range 10)))
            (range 10)))))
