@@ -3,7 +3,7 @@
             [clojure.edn :as edn]
             [powderkeg.core :as keg]
             [net.cgrand.xforms :as x])
-  (:import [org.apache.spark.sql functions Column Row RowFactory DataFrame]
+  (:import [org.apache.spark.sql functions Column Row RowFactory]
            [org.apache.spark.sql.types StructType StructField ArrayType DataType DataTypes Metadata MetadataBuilder]))
 
 (defmulti expr first)
@@ -132,7 +132,7 @@
     (instance? ArrayType dt) (list `s/* (to-spec (.elementType ^ArrayType dt)))
     :else (types-registry dt `any?)))
 
-(defn spec-of [^DataFrame df]
+(defn spec-of [df]
   (eval (to-spec (.schema df))))
 
 (defmacro adhoc-keys
