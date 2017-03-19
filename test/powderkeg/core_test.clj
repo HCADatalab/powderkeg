@@ -1,9 +1,7 @@
 (ns powderkeg.core-test
   (:require [powderkeg.core :as keg]
             [clojure.test :refer :all]
-            [powderkeg.fixtures :refer [with-local]]))
-
-(use-fixtures :once with-local)
+            [powderkeg.fixtures :refer [with-resources local-spark]]))
 
 (deftest rdd
   (is (= (into [] (keg/rdd (range 10)))
