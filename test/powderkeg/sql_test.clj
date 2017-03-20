@@ -15,7 +15,8 @@
              (map #(.getString % 0) (.collect data-set))))
       (is (= (s/form ::person)
              (s/form (sql/spec-of data-set))))
-      (.createTempView data-set "people")
-      (let [selection (sql/exec "select * from people")]
-        (is (= (s/form ::person)
-               (s/form (sql/spec-of selection))))))))
+      (when (.startsWith (.version powderkeg.core/*sc*) "2.")
+        (.createTempView data-set "people")
+        (let [selection (sql/exec "select * from people")]
+          (is (= (s/form ::person)
+                 (s/form (sql/spec-of selection)))))))))
