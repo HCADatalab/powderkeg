@@ -1,6 +1,7 @@
 (ns powderkeg.integration-test
   (:require [powderkeg.core :as keg]
             [powderkeg.fixtures :refer [with-resources]]
+            [powderkeg.asserts :refer [example-asserts]]
             [clojure.test :refer :all]
             [clojure.java.shell :refer [sh]]
             [clojure.string :as s]))
@@ -91,13 +92,11 @@
     [(spark "2.1.0-hadoop-2.7")
      clojure-dynamic-classloader
      (keg-connection "localhost")]
-    (is (= (into [] (keg/rdd (range 10)))
-           (range 10)))))
+    (example-asserts)))
 
 (deftest ^:integration rdd-spark-1.5.2
   (with-resources
     [(spark "1.5.2-hadoop-2.6")
      clojure-dynamic-classloader
      (keg-connection "master")]
-    (is (= (into [] (keg/rdd (range 10)))
-           (range 10)))))
+    (example-asserts)))
