@@ -10,9 +10,9 @@
 (deftest sql
   (with-resources
     [local-spark]
-    (let [data-set (sql/df [{::name "Brian"}] ::person)]
-      (is (= "Brian"
-             (.getString (.first data-set) 0)))
+    (let [data-set (sql/df [{::name "Brian"} {::name "Brita"}] ::person)]
+      (is (= ["Brian" "Brita"]
+             (map #(.getString % 0) (.collect data-set))))
       (is (= (s/form ::person)
              (s/form (sql/spec-of data-set))))
       (.createTempView data-set "people")
