@@ -2,7 +2,9 @@
   (:require [clojure.spec :as s]
             [clojure.edn :as edn]
             [powderkeg.core :as keg]
-            [net.cgrand.xforms :as x])
+            [powderkeg.macros :refer [compile-cond]]
+            [net.cgrand.xforms :as x]
+            [clojure.core.protocols :refer [coll-reduce CollReduce]])
   (:import [org.apache.spark.sql functions Column Row RowFactory]
            [org.apache.spark.sql.types StructType StructField ArrayType DataType DataTypes Metadata MetadataBuilder]))
 
@@ -134,6 +136,27 @@
 
 (defn spec-of [df]
   (eval (to-spec (.schema df))))
+
+(defn class-exists? [k]
+  (try
+    (Class/forName k)
+    true
+    (catch ClassNotFoundException e
+      false)))
+
+(extend-type (compile-cond
+               (class-exists? "org.apache.spark.sql.DataFrame") org.apache.spark.sql.DataFrame
+               (class-exists? "org.apache.spark.sql.Dataset") org.apache.spark.sql.Dataset)
+  CollReduce
+  (coll-reduce
+    ([data-set f]
+     (let [{::keys [from-sql]} (s/conform ::mapping (spec-of data-set))]
+       (coll-reduce (for [row (.collect data-set)]
+                      (from-sql row)) f)))
+    ([data-set f val]
+     (let [{::keys [from-sql]} (s/conform ::mapping (spec-of data-set))]
+       (coll-reduce (for [row (.collect data-set)]
+                      (from-sql row)) f val)))))
 
 (defmacro adhoc-keys
   "Don't use. adhoc-keys is against the spirit of clojure.spec, it's only for \"retrospecing\"
