@@ -1,11 +1,10 @@
 (ns powderkeg.sql
   (:require [clojure.spec :as s]
-    [clojure.edn :as edn]
-    [powderkeg.core :as keg]
-    [net.cgrand.xforms :as x])
-  (:import
-    [org.apache.spark.sql functions Column Row RowFactory DataFrame]
-    [org.apache.spark.sql.types StructType StructField ArrayType DataType DataTypes Metadata MetadataBuilder]))
+            [clojure.edn :as edn]
+            [powderkeg.core :as keg]
+            [net.cgrand.xforms :as x])
+  (:import [org.apache.spark.sql functions Column Row RowFactory]
+           [org.apache.spark.sql.types StructType StructField ArrayType DataType DataTypes Metadata MetadataBuilder]))
 
 (defmulti expr first)
 
@@ -16,7 +15,7 @@
   (-> (MetadataBuilder.) (.putString "powderkeg.sql" (pr-str x)) .build))
 
 (def ^:private regexp-repeat
-  (s/and 
+  (s/and
     (s/cat :tag any? :mapping ::mapping)
     (s/conformer
       (fn [{{::keys [schema to-sql from-sql tag src]} :mapping tag :tag}]
@@ -82,7 +81,7 @@
 (s/def ::mapping
   (s/and
     (s/or
-     :named (s/and qualified-keyword? 
+     :named (s/and qualified-keyword?
               (s/conformer
                 (fn [k]
                   (if-some [form (some-> k s/get-spec s/form)]
@@ -102,6 +101,11 @@
         sql-ctx (org.apache.spark.sql.SQLContext/getOrCreate (.sc keg/*sc*))]
     (.createDataFrame sql-ctx (keg/rdd in (map to-sql)) schema)))
 
+(defn from-df [df spec]
+  (let [{::keys [from-sql]} (s/conform ::mapping spec)]
+    (for [row (.collect df)]
+      (from-sql row))))
+
 (defn exec [query]
   (.sql (org.apache.spark.sql.SQLContext/getOrCreate (.sc keg/*sc*)) query))
 
@@ -112,7 +116,7 @@
     (instance? StructType dt)
     (let [specs (into {}
                   (map (fn [^StructField sf]
-                         [(edn/read-string (str ":" (.name sf))) 
+                         [(edn/read-string (str ":" (.name sf)))
                           (let [meta (.metadata sf)]
                             (if (.contains meta "powderkeg.sql")
                               (edn/read-string (.getString meta "powderkeg.sql"))
@@ -128,12 +132,12 @@
           skeys (when (seq opts) `(s/keys ~@opts))
           adhoc (when (seq adhoc) `(adhoc-keys ~@(apply concat adhoc)))]
       (or
-        (and skeys adhoc `(s/merge ~skeys ~adhoc)) 
+        (and skeys adhoc `(s/merge ~skeys ~adhoc))
         skeys adhoc `any?))
     (instance? ArrayType dt) (list `s/* (to-spec (.elementType ^ArrayType dt)))
     :else (types-registry dt `any?)))
 
-(defn spec-of [^DataFrame df]
+(defn spec-of [df]
   (eval (to-spec (.schema df))))
 
 (defmacro adhoc-keys
@@ -149,7 +153,6 @@
    s/Specize
    (specize* [s] s)
    (specize* [s _] s)
-   
    s/Spec
    (conform* [_ x] (reduce-kv (fn [m k pred]
                                 (if (contains? x k)
