@@ -101,6 +101,11 @@
         sql-ctx (org.apache.spark.sql.SQLContext/getOrCreate (.sc keg/*sc*))]
     (.createDataFrame sql-ctx (keg/rdd in (map to-sql)) schema)))
 
+(defn from-df [df spec]
+  (let [{::keys [from-sql]} (s/conform ::mapping spec)]
+    (for [row (.collect df)]
+      (from-sql row))))
+
 (defn exec [query]
   (.sql (org.apache.spark.sql.SQLContext/getOrCreate (.sc keg/*sc*)) query))
 
