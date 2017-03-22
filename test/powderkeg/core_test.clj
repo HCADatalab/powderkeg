@@ -34,7 +34,9 @@
   (is (= [[0 1 2 3 4 5] [6 7 8 9 10 11] [12 13 14 15 16 17] [18 19]]
          (keg/into [] (partition-by #(quot % 6)) (keg/rdd (range 20)))))
   (is (= [[0 1 2 3 4 5] [6 7 8 9 10 11] [12 13 14 15 16 17] [18 19]]
-         (into [] (keg/scomp (partition-by #(quot % 6))) (keg/rdd (range 20))))))
+         (into [] (keg/scomp (partition-by #(quot % 6))) (keg/rdd (range 20)))))
+  (is (= [[:a [[1 11] "aa"]] [:c ["x" "cc"]] [:b [2 "y"]]]
+         (into [] (keg/join (keg/rdd {:a [1 11] :b 2}) :or "x" (keg/rdd {:a "aa" :c "cc"} ) :or "y")))))
 
 
 (deftest pair-rdd
