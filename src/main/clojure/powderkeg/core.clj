@@ -13,23 +13,30 @@
     [clojure.core.reducers :as r]
     [net.cgrand.xforms :as x]))
 
-(def spark-version
-  (if-let [spark-version-props (io/resource "spark-version-info.properties")]
-    (with-open [rdr (io/reader spark-version-props)]
-      (-> (doto (java.util.Properties.) (.load rdr))
-          (get "version")
-          keyword))
-    :1.5.2)) ;; default to 1.5.2, since spark-version-info.properties didn't exist at that time
+(defprotocol TypeToClj (->clj [t]))
+
+(extend-protocol TypeToClj
+  java.lang.reflect.ParameterizedType
+  (->clj [t] (mapv ->clj (clj/into [(.getRawType t)] (.getActualTypeArguments t))))
+  java.lang.reflect.TypeVariable
+  (->clj [t] (.getName t))
+  java.lang.Class
+  (->clj [t] (.getName t)))
 
 (defn- sig [x]
   (cond
-    (instance? java.lang.reflect.Method x) 
+    (instance? java.lang.reflect.Method x)
     [(.getReturnType x) (.getName x) (vec (.getParameterTypes x))]
     (instance? java.lang.reflect.Constructor x)
     [nil "<init>" (vec (.getParameterTypes x))]))
 
+(defn- sig-matches? [msig x]
+  (cond
+    (vector? msig) (= msig (sig x))
+    (fn? msig)     (msig x)))
+
 (defn- has-class? [^Class class msig]
-  (some #(= msig (sig %)) (concat (.getMethods class) (.getConstructors class))))
+  (some (partial sig-matches? msig) (concat (.getMethods class) (.getConstructors class))))
 
 (defmacro ^:private compile-cond [& choices]
   (let [x (Object.)
@@ -384,6 +391,13 @@
       (let [xform (x/by-key (-> xform (cond-> post (comp post)) (cond->> pre (comp pre))))]
         (rdd* src xform options)))))
 
+(defn left-outer-join-optional [class-name method]
+  (and (-> method .getName (= "leftOuterJoin"))
+       (-> method
+           .getGenericReturnType
+           ->clj
+           (= ["org.apache.spark.api.java.JavaPairRDD" "K" ["scala.Tuple2" "V" [class-name "W"]]]))))
+
 (defn- default-left
   "Returns a stateless transducer on pairs which expects Optionals in key position, unwraps their values or return not-found when no value."
   [not-found]
@@ -393,8 +407,12 @@
         ([] (rf))
         ([acc] (rf acc))
         ([acc left right] (rf acc (compile-cond
-                                   (= spark-version :1.5.2) (.or ^com.google.common.base.Optional left not-found)
-                                   (= spark-version :2.1.0) (.or ^org.apache.spark.api.java.Optional left not-found)) right))))))
+                                   (has-class? org.apache.spark.api.java.JavaPairRDD
+                                               (partial left-outer-join-optional "org.apache.spark.api.java.Optional"))
+                                   (.or ^org.apache.spark.api.java.Optional left not-found)
+                                   (has-class? org.apache.spark.api.java.JavaPairRDD
+                                               (partial left-outer-join-optional "com.google.common.base.Optional"))
+                                   (.or ^com.google.common.base.Optional left not-found)) right))))))
 
 (defn- default-right
   "Returns a stateless transducer on pairs which expects Optionals in value position, unwraps their values or return not-found when no value."
@@ -405,8 +423,12 @@
        ([] (rf))
        ([acc] (rf acc))
        ([acc left right] (rf acc left (compile-cond
-                                       (= spark-version :1.5.2) (.or ^com.google.common.base.Optional right not-found)
-                                       (= spark-version :2.1.0) (.or ^org.apache.spark.api.java.Optional right not-found))))))))
+                                       (has-class? org.apache.spark.api.java.JavaPairRDD
+                                                   (partial left-outer-join-optional "org.apache.spark.api.java.Optional"))
+                                       (.or ^org.apache.spark.api.java.Optional right not-found)
+                                       (has-class? org.apache.spark.api.java.JavaPairRDD
+                                                   (partial left-outer-join-optional "com.google.common.base.Optional"))
+                                       (.or ^com.google.common.base.Optional right not-found))))))))
 
 (defn ^org.apache.spark.api.java.JavaRDD join
   "Performs a join between two rdds, each rdd may be followed by ':or default-value'.
