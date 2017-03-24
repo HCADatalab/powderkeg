@@ -35,7 +35,7 @@
     (vector? msig) (= msig (sig x))
     (fn? msig)     (msig x)))
 
-(defn- has-class? [^Class class msig]
+(defn- has-method? [^Class class msig]
   (some (partial sig-matches? msig) (concat (.getMethods class) (.getConstructors class))))
 
 (defmacro ^:private compile-cond [& choices]
@@ -296,9 +296,9 @@
               (reify org.apache.spark.api.java.function.FlatMapFunction ; todo: skip api.java.* go to spark
                 (call [_ it] 
                   (compile-cond
-                    (has-class? org.apache.spark.api.java.function.FlatMapFunction [java.util.Iterator "call" [Object]])
+                    (has-method? org.apache.spark.api.java.function.FlatMapFunction [java.util.Iterator "call" [Object]])
                     (.iterator ((df) it))
-                    (has-class? org.apache.spark.api.java.function.FlatMapFunction [Iterable "call" [Object]])
+                    (has-method? org.apache.spark.api.java.function.FlatMapFunction [Iterable "call" [Object]])
                     ((df) it))))
               preserve-partitioning)]
     rdd))
@@ -407,10 +407,10 @@
         ([] (rf))
         ([acc] (rf acc))
         ([acc left right] (rf acc (compile-cond
-                                   (has-class? org.apache.spark.api.java.JavaPairRDD
+                                   (has-method? org.apache.spark.api.java.JavaPairRDD
                                                (partial left-outer-join-optional "org.apache.spark.api.java.Optional"))
                                    (.or ^org.apache.spark.api.java.Optional left not-found)
-                                   (has-class? org.apache.spark.api.java.JavaPairRDD
+                                   (has-method? org.apache.spark.api.java.JavaPairRDD
                                                (partial left-outer-join-optional "com.google.common.base.Optional"))
                                    (.or ^com.google.common.base.Optional left not-found)) right))))))
 
@@ -423,10 +423,10 @@
        ([] (rf))
        ([acc] (rf acc))
        ([acc left right] (rf acc left (compile-cond
-                                       (has-class? org.apache.spark.api.java.JavaPairRDD
+                                       (has-method? org.apache.spark.api.java.JavaPairRDD
                                                    (partial left-outer-join-optional "org.apache.spark.api.java.Optional"))
                                        (.or ^org.apache.spark.api.java.Optional right not-found)
-                                       (has-class? org.apache.spark.api.java.JavaPairRDD
+                                       (has-method? org.apache.spark.api.java.JavaPairRDD
                                                    (partial left-outer-join-optional "com.google.common.base.Optional"))
                                        (.or ^com.google.common.base.Optional right not-found))))))))
 
@@ -473,12 +473,12 @@
         partitioner (org.apache.spark.Partitioner/defaultPartitioner
                      rdd (scala-seq rdds))]
     (by-key (compile-cond
-              (has-class? org.apache.spark.rdd.CoGroupedRDD [nil "<init>" [scala.collection.Seq org.apache.spark.Partitioner scala.reflect.ClassTag]] )
+              (has-method? org.apache.spark.rdd.CoGroupedRDD [nil "<init>" [scala.collection.Seq org.apache.spark.Partitioner scala.reflect.ClassTag]] )
               (org.apache.spark.rdd.CoGroupedRDD.
               (scala-seq (cons rdd rdds))
               partitioner
               (.AnyRef scala.reflect.ClassTag$/MODULE$))
-              (has-class? org.apache.spark.rdd.CoGroupedRDD [nil "<init>" [scala.collection.Seq org.apache.spark.Partitioner]] )
+              (has-method? org.apache.spark.rdd.CoGroupedRDD [nil "<init>" [scala.collection.Seq org.apache.spark.Partitioner]] )
               (org.apache.spark.rdd.CoGroupedRDD.
               (scala-seq (cons rdd rdds))
               partitioner))
