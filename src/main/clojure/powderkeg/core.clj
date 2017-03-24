@@ -406,13 +406,14 @@
       (x/kvrf
         ([] (rf))
         ([acc] (rf acc))
-        ([acc left right] (rf acc (compile-cond
-                                   (has-method? org.apache.spark.api.java.JavaPairRDD
-                                               (partial left-outer-join-optional "org.apache.spark.api.java.Optional"))
-                                   (.or ^org.apache.spark.api.java.Optional left not-found)
-                                   (has-method? org.apache.spark.api.java.JavaPairRDD
-                                               (partial left-outer-join-optional "com.google.common.base.Optional"))
-                                   (.or ^com.google.common.base.Optional left not-found)) right))))))
+        ([acc left right] (rf acc (.or (compile-cond
+                                        (has-method? org.apache.spark.api.java.JavaPairRDD
+                                                     (partial left-outer-join-optional "org.apache.spark.api.java.Optional"))
+                                        ^org.apache.spark.api.java.Optional left
+                                        (has-method? org.apache.spark.api.java.JavaPairRDD
+                                                     (partial left-outer-join-optional "com.google.common.base.Optional"))
+                                        ^com.google.common.base.Optional left)
+                                       not-found) right))))))
 
 (defn- default-right
   "Returns a stateless transducer on pairs which expects Optionals in value position, unwraps their values or return not-found when no value."
@@ -422,13 +423,14 @@
      (x/kvrf
        ([] (rf))
        ([acc] (rf acc))
-       ([acc left right] (rf acc left (compile-cond
-                                       (has-method? org.apache.spark.api.java.JavaPairRDD
-                                                   (partial left-outer-join-optional "org.apache.spark.api.java.Optional"))
-                                       (.or ^org.apache.spark.api.java.Optional right not-found)
-                                       (has-method? org.apache.spark.api.java.JavaPairRDD
-                                                   (partial left-outer-join-optional "com.google.common.base.Optional"))
-                                       (.or ^com.google.common.base.Optional right not-found))))))))
+       ([acc left right] (rf acc left (.or (compile-cond
+                                            (has-method? org.apache.spark.api.java.JavaPairRDD
+                                                         (partial left-outer-join-optional "org.apache.spark.api.java.Optional"))
+                                            ^org.apache.spark.api.java.Optional right
+                                            (has-method? org.apache.spark.api.java.JavaPairRDD
+                                                         (partial left-outer-join-optional "com.google.common.base.Optional"))
+                                            ^com.google.common.base.Optional right)
+                                           not-found)))))))
 
 (defn ^org.apache.spark.api.java.JavaRDD join
   "Performs a join between two rdds, each rdd may be followed by ':or default-value'.
