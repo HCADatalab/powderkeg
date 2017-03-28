@@ -8,18 +8,16 @@
 (s/def ::person (s/keys :req [::name]))
 
 (deftest sql
-  (with-resources
-    [local-spark]
-    (let [in [{::name "Brian"} {::name "Brita"}]
-          data-set (sql/df in ::person)]
-      (is (= ["Brian" "Brita"]
-             (map #(.getString % 0) (.collect data-set))))
-      (is (= (s/form ::person)
-             (s/form (sql/spec-of data-set))))
-      (is (= in
-             (sql/from-df data-set ::person)))
-      (when (.startsWith (.version powderkeg.core/*sc*) "2.")
-        (.createTempView data-set "people")
-        (let [selection (sql/exec "select * from people")]
-          (is (= (s/form ::person)
-                 (s/form (sql/spec-of selection)))))))))
+  (let [in [{::name "Brian"} {::name "Brita"}]
+        data-set (sql/df in ::person)]
+    (is (= ["Brian" "Brita"]
+           (map #(.getString % 0) (.collect data-set))))
+    (is (= (s/form ::person)
+           (s/form (sql/spec-of data-set))))
+    (is (= in
+           (sql/from-df data-set ::person)))
+    (when (.startsWith (.version powderkeg.core/*sc*) "2.")
+      (.createTempView data-set "people")
+      (let [selection (sql/exec "select * from people")]
+        (is (= (s/form ::person)
+               (s/form (sql/spec-of selection))))))))

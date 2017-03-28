@@ -19,6 +19,11 @@
   (keg/connect! "local[2]")
   #(keg/disconnect!))
 
+(defn keg-connection [host]
+  (fn []
+    (keg/connect! (str "spark://" host ":7077"))
+    #(keg/disconnect!)))
+
 (defn clojure-dynamic-classloader []
   (let [cl (.getContextClassLoader (Thread/currentThread))]
     (.setContextClassLoader (Thread/currentThread) (clojure.lang.DynamicClassLoader. cl))

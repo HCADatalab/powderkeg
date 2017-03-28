@@ -1,7 +1,5 @@
-(ns powderkeg.integration-test
+(ns powderkeg.docker
   (:require [powderkeg.core :as keg]
-            [powderkeg.fixtures :refer [with-resources clojure-dynamic-classloader]]
-            [powderkeg.asserts :refer [example-asserts]]
             [clojure.test :refer :all]
             [clojure.java.shell :refer [sh]]
             [clojure.string :as s]))
@@ -76,22 +74,3 @@
   (fn []
     (start-spark version)
     #(stop-cluster version)))
-
-(defn keg-connection [host]
-  (fn []
-    (keg/connect! (str "spark://" host ":7077"))
-    #(keg/disconnect!)))
-
-(deftest ^:integration rdd-spark-2.1.0
-  (with-resources
-    [(spark "2.1.0-hadoop-2.7")
-     clojure-dynamic-classloader
-     (keg-connection "localhost")]
-    (example-asserts)))
-
-(deftest ^:integration rdd-spark-1.5.2
-  (with-resources
-    [(spark "1.5.2-hadoop-2.6")
-     clojure-dynamic-classloader
-     (keg-connection "master")]
-    (example-asserts)))
