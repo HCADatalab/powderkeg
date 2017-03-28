@@ -5,13 +5,17 @@
 (defn clojure-dynamic-classloader [f]
   (let [cl (.getContextClassLoader (Thread/currentThread))]
     (.setContextClassLoader (Thread/currentThread) (clojure.lang.DynamicClassLoader. cl))
-    (f)
-    (.setContextClassLoader (Thread/currentThread) cl)))
+    (try
+      (f)
+      (finally 
+        (.setContextClassLoader (Thread/currentThread) cl)))))
 
 (defn with-local [f]
   (keg/connect! "local[2]")
-  (f)
-  (keg/disconnect!))
+  (try
+    (f)
+    (finally
+      (keg/disconnect!))))
 
 (use-fixtures :once clojure-dynamic-classloader with-local)
 
