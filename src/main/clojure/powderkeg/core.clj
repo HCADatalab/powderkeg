@@ -85,8 +85,8 @@
 (defmacro ^:private compile-cond [& choices]
   (let [x (Object.)
         expr
-        (reduce (fn [_ [test expr]]
-                  (when (eval test) (reduced expr)))
+        (reduce (fn [x [test expr]]
+                  (if (eval test) (reduced expr) x))
           x (partition 2 choices))]
     (when (= x expr)
       (throw (ex-info "No valid choice." {:form &form})))
@@ -342,7 +342,7 @@
                   (compile-cond
                     (has-method? org.apache.spark.api.java.function.FlatMapFunction '[java.util.Iterator "call" [?]])
                     (.iterator ((df) it))
-                    (has-method? org.apache.spark.api.java.function.FlatMapFunction '[Iterable "call" [?]])
+                    (has-method? org.apache.spark.api.java.function.FlatMapFunction '[java.lang.Iterable "call" [?]])
                     ((df) it))))
               preserve-partitioning)]
     rdd))
