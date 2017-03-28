@@ -13,30 +13,74 @@
     [clojure.core.reducers :as r]
     [net.cgrand.xforms :as x]))
 
-(defprotocol TypeToClj (->clj [t]))
+(defn- generic-type [t]
+  (condp instance? t
+    java.lang.Class (symbol (.getName t))
+    java.lang.reflect.TypeVariable (if-some [bounds (seq (remove #{Object} (.getBounds t)))]
+                                     (list* 'extends (keyword (.getName t))
+                                       (map generic-type bounds))
+                                     (keyword (.getName t)))
+    java.lang.reflect.WildcardType (if-some [bounds (seq (remove #{Object} (.getUpperBounds t)))]
+                                     (list* 'extends '? (map generic-type bounds))
+                                     (if-some [bounds (seq (.getLowerBounds t))]
+                                       (list* 'super '? (map generic-type bounds))
+                                       '?))
+    java.lang.reflect.ParameterizedType (clj/into [(generic-type (.getRawType t))]
+                                          (map generic-type)
+                                          (.getActualTypeArguments t))
+    java.lang.reflect.GenericArrayType (list 'array-of (generic-type (.getGenericComponentType t)))
+    (throw (IllegalArgumentException. (pr-str t)))))
 
-(extend-protocol TypeToClj
-  java.lang.reflect.ParameterizedType
-  (->clj [t] (mapv ->clj (clj/into [(.getRawType t)] (.getActualTypeArguments t))))
-  java.lang.reflect.TypeVariable
-  (->clj [t] (.getName t))
-  java.lang.Class
-  (->clj [t] (.getName t)))
+(defn- type-order [t]
+  (cond
+    (nil? t) [-1 0]
+    (= t '?) [0 0]
+    (keyword? t) [1 t]
+    (symbol? t) [2 t]
+    (vector? t) [3 (mapv type-order t)]
+    :else (case (first t)
+            super [4 (type-order (second t))]
+            extends [5 (mapv type-order t)]
+            array-of [6 (type-order (second t))])))
+
+(defn- lookup [s k]
+  (if-some [x (s k)]
+    (if (keyword? x)
+      (recur s x)
+      x)
+    k))
+
+(defn- unify-types
+  ([a b]
+    (unify-types {} a b))
+  ([s a b]
+    ; todo: most advanced stuff (bounds) is skipped
+    (let [[a b] (sort-by type-order (map #(lookup s %) [a b]))]
+      (if (= a b)
+        s
+        (cond
+          (nil? a) nil
+          (= a '?) s
+          (keyword? a) (assoc s a b)
+          (symbol? a) (when (vector? b) (recur s a (first b)))
+          (vector? a) (when (and (vector? b) (= (count a) (count b)))
+                        (reduce (fn [s [a b]]
+                                  (or (unify-types s a b)
+                                    (reduced nil))) s (map vector a b))))))))
+
+(defn- unify-sigs [[ra na aa] [rb nb ab]]
+  (when (= na nb)
+    (some-> (unify-types ra rb) (unify-types aa ab))))
 
 (defn- sig [x]
   (cond
     (instance? java.lang.reflect.Method x)
-    [(.getReturnType x) (.getName x) (vec (.getParameterTypes x))]
+    [(generic-type (.getGenericReturnType x)) (.getName x) (clj/into [] (map generic-type) (.getGenericParameterTypes x))]
     (instance? java.lang.reflect.Constructor x)
-    [nil "<init>" (vec (.getParameterTypes x))]))
-
-(defn- sig-matches? [msig x]
-  (cond
-    (vector? msig) (= msig (sig x))
-    (fn? msig)     (msig x)))
+    [nil "<init>" (clj/into [] (map generic-type) (.getGenericParameterTypes x))]))
 
 (defn- has-method? [^Class class msig]
-  (some (partial sig-matches? msig) (concat (.getMethods class) (.getConstructors class))))
+  (some #(unify-sigs msig (sig %)) (concat (.getMethods class) (.getConstructors class))))
 
 (defmacro ^:private compile-cond [& choices]
   (let [x (Object.)
@@ -296,9 +340,9 @@
               (reify org.apache.spark.api.java.function.FlatMapFunction ; todo: skip api.java.* go to spark
                 (call [_ it] 
                   (compile-cond
-                    (has-method? org.apache.spark.api.java.function.FlatMapFunction [java.util.Iterator "call" [Object]])
+                    (has-method? org.apache.spark.api.java.function.FlatMapFunction '[java.util.Iterator "call" [?]])
                     (.iterator ((df) it))
-                    (has-method? org.apache.spark.api.java.function.FlatMapFunction [Iterable "call" [Object]])
+                    (has-method? org.apache.spark.api.java.function.FlatMapFunction '[Iterable "call" [?]])
                     ((df) it))))
               preserve-partitioning)]
     rdd))
@@ -391,13 +435,6 @@
       (let [xform (x/by-key (-> xform (cond-> post (comp post)) (cond->> pre (comp pre))))]
         (rdd* src xform options)))))
 
-(defn left-outer-join-optional [class-name method]
-  (and (-> method .getName (= "leftOuterJoin"))
-       (-> method
-           .getGenericReturnType
-           ->clj
-           (= ["org.apache.spark.api.java.JavaPairRDD" "K" ["scala.Tuple2" "V" [class-name "W"]]]))))
-
 (defn- default-left
   "Returns a stateless transducer on pairs which expects Optionals in key position, unwraps their values or return not-found when no value."
   [not-found]
@@ -407,13 +444,15 @@
         ([] (rf))
         ([acc] (rf acc))
         ([acc left right] (rf acc (.or (compile-cond
-                                        (has-method? org.apache.spark.api.java.JavaPairRDD
-                                                     (partial left-outer-join-optional "org.apache.spark.api.java.Optional"))
-                                        ^org.apache.spark.api.java.Optional left
-                                        (has-method? org.apache.spark.api.java.JavaPairRDD
-                                                     (partial left-outer-join-optional "com.google.common.base.Optional"))
-                                        ^com.google.common.base.Optional left)
-                                       not-found) right))))))
+                                         (has-method? org.apache.spark.api.java.JavaPairRDD
+                                           '[[org.apache.spark.api.java.JavaPairRDD ? [scala.Tuple2 ? org.apache.spark.api.java.Optional]]
+                                             "leftOuterJoin" [?]])
+                                         ^org.apache.spark.api.java.Optional left
+                                         (has-method? org.apache.spark.api.java.JavaPairRDD
+                                           '[[org.apache.spark.api.java.JavaPairRDD ? [scala.Tuple2 ? com.google.common.base.Optional]]
+                                             "leftOuterJoin" [?]])
+                                         ^com.google.common.base.Optional left)
+                                    not-found) right))))))
 
 (defn- default-right
   "Returns a stateless transducer on pairs which expects Optionals in value position, unwraps their values or return not-found when no value."
@@ -424,13 +463,15 @@
        ([] (rf))
        ([acc] (rf acc))
        ([acc left right] (rf acc left (.or (compile-cond
-                                            (has-method? org.apache.spark.api.java.JavaPairRDD
-                                                         (partial left-outer-join-optional "org.apache.spark.api.java.Optional"))
-                                            ^org.apache.spark.api.java.Optional right
-                                            (has-method? org.apache.spark.api.java.JavaPairRDD
-                                                         (partial left-outer-join-optional "com.google.common.base.Optional"))
-                                            ^com.google.common.base.Optional right)
-                                           not-found)))))))
+                                             (has-method? org.apache.spark.api.java.JavaPairRDD
+                                               '[[org.apache.spark.api.java.JavaPairRDD ? [scala.Tuple2 ? org.apache.spark.api.java.Optional]]
+                                                 "leftOuterJoin" [?]])
+                                             ^org.apache.spark.api.java.Optional right
+                                             (has-method? org.apache.spark.api.java.JavaPairRDD
+                                               '[[org.apache.spark.api.java.JavaPairRDD ? [scala.Tuple2 ? com.google.common.base.Optional]]
+                                                 "leftOuterJoin" [?]])
+                                             ^com.google.common.base.Optional right)
+                                        not-found)))))))
 
 (defn ^org.apache.spark.api.java.JavaRDD join
   "Performs a join between two rdds, each rdd may be followed by ':or default-value'.
@@ -475,12 +516,12 @@
         partitioner (org.apache.spark.Partitioner/defaultPartitioner
                      rdd (scala-seq rdds))]
     (by-key (compile-cond
-              (has-method? org.apache.spark.rdd.CoGroupedRDD [nil "<init>" [scala.collection.Seq org.apache.spark.Partitioner scala.reflect.ClassTag]] )
+              (has-method? org.apache.spark.rdd.CoGroupedRDD '[nil "<init>" [scala.collection.Seq org.apache.spark.Partitioner scala.reflect.ClassTag]] )
               (org.apache.spark.rdd.CoGroupedRDD.
               (scala-seq (cons rdd rdds))
               partitioner
               (.AnyRef scala.reflect.ClassTag$/MODULE$))
-              (has-method? org.apache.spark.rdd.CoGroupedRDD [nil "<init>" [scala.collection.Seq org.apache.spark.Partitioner]] )
+              (has-method? org.apache.spark.rdd.CoGroupedRDD '[nil "<init>" [scala.collection.Seq org.apache.spark.Partitioner]] )
               (org.apache.spark.rdd.CoGroupedRDD.
               (scala-seq (cons rdd rdds))
               partitioner))
