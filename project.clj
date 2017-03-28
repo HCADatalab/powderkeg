@@ -1,4 +1,4 @@
-(defproject hcadatalab/powderkeg "0.5.0"
+(defproject hcadatalab/powderkeg "0.5.1"
   :description "Live-coding Spark clusters!"
   :url "https://github.com/HCADatalab/powderkeg"
   :license {:name "Eclipse Public License"

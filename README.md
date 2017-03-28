@@ -11,14 +11,14 @@ First, add Powderkeg and Spark (1.5 to 2.1 are supported, any scala version) to 
 E.g. 
 
 ```clj
-:dependencies [[hcadatalab/powderkeg "0.5.0"]
+:dependencies [[hcadatalab/powderkeg "0.5.1"]
                [org.apache.spark/spark-core_2.11 "2.1.0"]
                [org.apache.spark/spark-streaming_2.11 "2.1.0"]]
 ```
 or
 
 ```clj
-:dependencies [[hcadatalab/powderkeg "0.5.0"]
+:dependencies [[hcadatalab/powderkeg "0.5.1"]
                [org.apache.spark/spark-core_2.10 "1.5.2"]
                [org.apache.spark/spark-streaming_2.10 "1.5.2"]]
 ```
