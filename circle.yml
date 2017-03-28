@@ -6,7 +6,7 @@ machine:
 
 test:
   override:
-    - lein test-all
+    - lein test-all-local
   post:
-    - lein with-profile spark2 test :only powderkeg.integration-test/rdd-spark-2.1.0
-    - lein with-profile spark1.5 test :only powderkeg.integration-test/rdd-spark-1.5.2
+    - lein test-all-1.5
+    - lein test-all-2.1
