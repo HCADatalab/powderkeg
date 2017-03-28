@@ -1,5 +1,7 @@
 (ns powderkeg.integration-test
   (:require [powderkeg.core :as keg]
+            [powderkeg.fixtures :refer [with-resources clojure-dynamic-classloader]]
+            [powderkeg.asserts :refer [example-asserts]]
             [clojure.test :refer :all]
             [clojure.java.shell :refer [sh]]
             [clojure.string :as s]))
@@ -59,20 +61,6 @@
   (when-not (System/getenv "CIRCLECI")
     (sh! "docker" "rm" instance)))
 
-(defmacro with-resources
-  "Setup resources and tear them down after running body.
-  Takes a function, which when called, will setup necessary resources,
-  and returns a function, which when called, will tear the resources down.
-
-  Can be given multiple setup functions, which are called in order"
-  [setups & body]
-  (if-some [[setup & setups] (seq setups)]
-    `(let [teardown# (~setup)]
-       (try
-         (with-resources [~@setups] ~@body)
-         (finally (teardown#))))
-    `(do ~@body)))
-
 (defn start-spark [version]
   (let [pwd (.getAbsolutePath (java.io.File. ""))]
     (start-master pwd version)
@@ -89,11 +77,6 @@
     (start-spark version)
     #(stop-cluster version)))
 
-(defn clojure-dynamic-classloader []
-  (let [cl (.getContextClassLoader (Thread/currentThread))]
-    (.setContextClassLoader (Thread/currentThread) (clojure.lang.DynamicClassLoader. cl))
-    #(.setContextClassLoader (Thread/currentThread) cl)))
-
 (defn keg-connection [host]
   (fn []
     (keg/connect! (str "spark://" host ":7077"))
@@ -104,13 +87,11 @@
     [(spark "2.1.0-hadoop-2.7")
      clojure-dynamic-classloader
      (keg-connection "localhost")]
-    (is (= (into [] (keg/rdd (range 10)))
-           (range 10)))))
+    (example-asserts)))
 
 (deftest ^:integration rdd-spark-1.5.2
   (with-resources
     [(spark "1.5.2-hadoop-2.6")
      clojure-dynamic-classloader
      (keg-connection "master")]
-    (is (= (into [] (keg/rdd (range 10)))
-           (range 10)))))
+    (example-asserts)))
