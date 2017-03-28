@@ -1,6 +1,6 @@
 (ns powderkeg.integration-test
   (:require [powderkeg.core :as keg]
-            [powderkeg.fixtures :refer [with-resources]]
+            [powderkeg.fixtures :refer [with-resources clojure-dynamic-classloader]]
             [powderkeg.asserts :refer [example-asserts]]
             [clojure.test :refer :all]
             [clojure.java.shell :refer [sh]]
@@ -76,11 +76,6 @@
   (fn []
     (start-spark version)
     #(stop-cluster version)))
-
-(defn clojure-dynamic-classloader []
-  (let [cl (.getContextClassLoader (Thread/currentThread))]
-    (.setContextClassLoader (Thread/currentThread) (clojure.lang.DynamicClassLoader. cl))
-    #(.setContextClassLoader (Thread/currentThread) cl)))
 
 (defn keg-connection [host]
   (fn []

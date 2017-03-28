@@ -18,3 +18,8 @@
 (defn local-spark []
   (keg/connect! "local[2]")
   #(keg/disconnect!))
+
+(defn clojure-dynamic-classloader []
+  (let [cl (.getContextClassLoader (Thread/currentThread))]
+    (.setContextClassLoader (Thread/currentThread) (clojure.lang.DynamicClassLoader. cl))
+    #(.setContextClassLoader (Thread/currentThread) cl)))

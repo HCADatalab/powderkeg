@@ -35,5 +35,9 @@
                            :key odd?
                            :pre (map inc)
                            (x/reduce +)
-                           :post (map str))))))
+                           :post (map str)))))
+  (is (= {:a [[1 11] "aa"] :c ["x" "cc"] :b [2 "y"]}
+        (into {} (keg/join
+                   (keg/rdd {:a [1 11] :b 2}) :or "x"
+                   (keg/rdd {:a "aa" :c "cc"}) :or "y")))))
 
