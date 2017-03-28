@@ -125,13 +125,86 @@
     (.accept rdr class-visitor 0)
     (.toByteArray cw)))
 
-(def var-transform
+(defmacro ^:private proxy-unique-fns-method-visitor [mv]
+  (let [methods+arglists
+        (into [] (keep #(when (and (.startsWith (.getName %) "visit") (= Void/TYPE (.getReturnType %)))
+                          [(.getName %) (repeatedly (count (.getParameterTypes %)) gensym)]))
+          (.getMethods clojure.asm.MethodVisitor))
+        sm (gensym "sm")]
+    `(let [insns# ~(into #{}
+                     (comp (map first) (filter #(.endsWith % "Insn")) (map keyword))
+                     methods+arglists)
+           mv# ^clojure.asm.MethodVisitor ~mv
+           q# (java.util.ArrayDeque.)
+           meths# ~(into {}
+                     (for [[name arglist] methods+arglists]
+                       [(keyword name)
+                        `(fn [mv# [~@arglist]]
+                           (~(symbol (str \. name)) mv# ~@arglist))]))
+           flush!# (fn flush!#
+                     ([] (flush!# #{}))
+                     ([black-list#]
+                       (when-some [[meth# args#] (.poll q#)]
+                         (when-not (black-list# meth#) ((meths# meth#) mv# args#))
+                         (recur black-list#))))
+           ~sm (fn [meth# args#]
+                 (-> 
+                   (->> q# (map first) (keep insns#) count)
+                   (case
+                     0 (and (= meth# :visitVarInsn)
+                         (let [[op# idx#] args#]
+                           (and (= op# clojure.asm.Opcodes/ALOAD)
+                             (= idx# 7)))) ; brittle
+                     1 (or (not (insns# meth#))
+                         (and (= meth# :visitJumpInsn)
+                          (let [[op# label#] args#]
+                            (= op# clojure.asm.Opcodes/IFNULL))))
+                     2 (or (not (insns# meth#))
+                         (when
+                           (and (= meth# :visitTypeInsn)
+                             (let [[op# type#] args#]
+                               (and (= op# clojure.asm.Opcodes/NEW)
+                                 (= type# "java/lang/StringBuilder"))))
+                           :done))
+                     nil)
+                   (case
+                     (nil false) (do 
+                                   (flush!#)
+                                   ((meths# meth#) mv# args#))
+                     :done (do (flush!# insns#) ((meths# meth#) mv# args#))
+                     true (.add q# [meth# args#]))))]
+       (proxy [clojure.asm.MethodVisitor] [clojure.asm.Opcodes/ASM4 mv#]
+         ~@(for [[name arglist] methods+arglists]
+             `(~(symbol name) [~@arglist]
+                (~sm ~(keyword name) [~@arglist])))))))
+
+(defn unique-fns [bytes]
+  (let [rdr (clojure.asm.ClassReader. bytes)
+        cw (clojure.asm.ClassWriter. 0)
+        class-visitor
+        (proxy [clojure.asm.ClassVisitor] [clojure.asm.Opcodes/ASM4 cw]
+          (visitMethod [access method-name mdesc sig exs]
+            (let [mv (.visitMethod cw access method-name mdesc sig exs)]
+              (if (= method-name "parse")
+                (proxy-unique-fns-method-visitor mv)
+                mv))))]
+    (.accept rdr class-visitor 0)
+    (.toByteArray cw)))
+
+(defn transform-classes-once
+  "Runs a transformation (function from bytes to bytes) on the specified classes once."
+  [instrumentation classes bytes-transform]
   "ClassFileTransfomer which instruments clojure.lang.Var."
-  (reify java.io.Serializable
-    java.lang.instrument.ClassFileTransformer
-    (transform [_ loader classname class domain bytes]
-      (when (= "clojure/lang/Var" classname)
-        (watch-vars bytes)))))
+  (let [classes (set classes)
+        transformer (reify java.io.Serializable
+                      java.lang.instrument.ClassFileTransformer
+                      (transform [_ loader classname class domain bytes]
+                        (when (classes class) (bytes-transform bytes))))]
+    (.addTransformer instrumentation transformer true)
+    (try
+      (.retransformClasses instrumentation (into-array classes))
+      (finally
+        (.removeTransformer instrumentation transformer)))))
 
 (defn ^java.util.jar.Manifest manifest
   "Creates an MANIFEST.MF out of a map"
@@ -206,6 +279,9 @@
        (println "done!"))
     
      (print "Instrumenting clojure.lang.Var... ")
-     (.addTransformer powderkeg.Agent/instrumentation var-transform true)
-     (.retransformClasses powderkeg.Agent/instrumentation (into-array [clojure.lang.Var]))
+     (transform-classes-once powderkeg.Agent/instrumentation [clojure.lang.Var] watch-vars)
+     (println "done!")
+     
+     (print "Patching clojure.lang.Compiler... ")
+     (transform-classes-once powderkeg.Agent/instrumentation [clojure.lang.Compiler$FnExpr] unique-fns)
      (println "done!")))
