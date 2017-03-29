@@ -4,6 +4,17 @@
             [clojure.java.shell :refer [sh]]
             [clojure.string :as s]))
 
+(defmacro timing [log-prefix & body]
+  `(do
+     (println (str ~log-prefix " starting"))
+     (let [start# (System/currentTimeMillis)
+           result# (do ~@body)
+           end# (System/currentTimeMillis)
+           duration# (- end# start#)]
+       (println (str ~log-prefix " took: " (- end# start#) "ms" ))
+       {:result result#
+        :duration duration#})))
+
 (defn sh! [& args]
   (let [{:keys [exit out err] :as ret} (apply sh args)]
     (when-not (zero? exit)
@@ -59,11 +70,13 @@
   (when-not (System/getenv "CIRCLECI")
     (sh! "docker" "rm" instance)))
 
-(defn start-spark [version]
+(defn start-cluster [version]
   (let [pwd (.getAbsolutePath (java.io.File. ""))]
-    (start-master pwd version)
+    (timing "Master startup"
+      (start-master pwd version))
     (Thread/sleep 2000)
-    (start-worker pwd version)
+    (timing "Worker startup"
+      (start-worker pwd version))
     (Thread/sleep 2000)))
 
 (defn stop-cluster [version]
@@ -72,5 +85,6 @@
 
 (defn spark [version]
   (fn []
-    (start-spark version)
-    #(stop-cluster version)))
+    (start-cluster version)
+    #(timing "Cluster shutdown"
+       (stop-cluster version))))
