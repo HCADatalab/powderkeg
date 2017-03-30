@@ -15,7 +15,7 @@
     (is (= (s/form ::person)
            (s/form (sql/spec-of data-set))))
     (is (= in
-           (sql/from-df data-set ::person)))
+           (into [] data-set)))
     (when (.startsWith (.version powderkeg.core/*sc*) "2.")
       (.createTempView data-set "people")
       (let [selection (sql/exec "select * from people")]

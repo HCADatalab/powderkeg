@@ -2,8 +2,9 @@
   (:require [clojure.spec :as s]
             [clojure.edn :as edn]
             [powderkeg.core :as keg]
-            [net.cgrand.xforms :as x])
-  (:import [org.apache.spark.sql functions Column Row RowFactory]
+            [net.cgrand.xforms :as x]
+            [clojure.core.protocols :refer [coll-reduce CollReduce]])
+  (:import [org.apache.spark.sql functions Column Row RowFactory Dataset]
            [org.apache.spark.sql.types StructType StructField ArrayType DataType DataTypes Metadata MetadataBuilder]))
 
 (defmulti expr first)
@@ -101,11 +102,6 @@
         sql-ctx (org.apache.spark.sql.SQLContext/getOrCreate (.sc keg/*sc*))]
     (.createDataFrame sql-ctx (keg/rdd in (map to-sql)) schema)))
 
-(defn from-df [df spec]
-  (let [{::keys [from-sql]} (s/conform ::mapping spec)]
-    (for [row (.collect df)]
-      (from-sql row))))
-
 (defn exec [query]
   (.sql (org.apache.spark.sql.SQLContext/getOrCreate (.sc keg/*sc*)) query))
 
@@ -139,6 +135,18 @@
 
 (defn spec-of [df]
   (eval (to-spec (.schema df))))
+
+(extend-type Dataset
+  CollReduce
+  (coll-reduce
+    ([data-set f]
+     (let [{::keys [from-sql]} (s/conform ::mapping (spec-of data-set))]
+       (coll-reduce (for [row (.collect data-set)]
+                      (from-sql row)) f)))
+    ([data-set f val]
+     (let [{::keys [from-sql]} (s/conform ::mapping (spec-of data-set))]
+       (coll-reduce (for [row (.collect data-set)]
+                      (from-sql row)) f val)))))
 
 (defmacro adhoc-keys
   "Don't use. adhoc-keys is against the spirit of clojure.spec, it's only for \"retrospecing\"
