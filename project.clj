@@ -13,12 +13,12 @@
              :spark1.5 [:leiningen/default :spark1.5-deps :kryo-3]
              :spark2-deps ^{:pom-scope :provided}
              {:dependencies [[org.apache.spark/spark-core_2.11 "2.1.0"]
-                             [org.apache.spark/spark-streaming_2.11 "2.1.0"]
-                             [org.apache.spark/spark-sql_2.11 "2.1.0"]]}
+                             [org.apache.spark/spark-sql_2.11 "2.1.0"]
+                             [org.apache.spark/spark-streaming_2.11 "2.1.0"]]}
              :spark1.5-deps ^{:pom-scope :provided}
-             {:dependencies [[org.apache.spark/spark-core_2.10 "1.5.2"]
-                             [org.apache.spark/spark-streaming_2.10 "1.5.2"]
-                             [org.apache.spark/spark-sql_2.10 "1.5.2"]]}
+                        {:dependencies [[org.apache.spark/spark-core_2.10 "1.5.2"]
+                                        [org.apache.spark/spark-sql_2.10 "1.5.2"]
+                                        [org.apache.spark/spark-streaming_2.10 "1.5.2"]]}
              :kryo-3 {:dependencies [[com.esotericsoftware/kryo-shaded "3.0.3"]]}
              :kryo-4 {:dependencies [[com.esotericsoftware/kryo-shaded "4.0.0"]]}}
   :dependencies [[org.clojure/clojure "1.9.0-alpha15"]
