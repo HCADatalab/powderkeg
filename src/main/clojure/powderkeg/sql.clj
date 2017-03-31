@@ -2,9 +2,10 @@
   (:require [clojure.spec :as s]
             [clojure.edn :as edn]
             [powderkeg.core :as keg]
+            [powderkeg.macros :refer [compile-cond]]
             [net.cgrand.xforms :as x]
             [clojure.core.protocols :refer [coll-reduce CollReduce]])
-  (:import [org.apache.spark.sql functions Column Row RowFactory Dataset]
+  (:import [org.apache.spark.sql functions Column Row RowFactory]
            [org.apache.spark.sql.types StructType StructField ArrayType DataType DataTypes Metadata MetadataBuilder]))
 
 (defmulti expr first)
@@ -136,7 +137,16 @@
 (defn spec-of [df]
   (eval (to-spec (.schema df))))
 
-(extend-type Dataset
+(defn class-exists? [k]
+  (try
+    (Class/forName k)
+    true
+    (catch ClassNotFoundException e
+      false)))
+
+(extend-type (compile-cond
+               (class-exists? "org.apache.spark.sql.DataFrame") org.apache.spark.sql.DataFrame
+               (class-exists? "org.apache.spark.sql.Dataset") org.apache.spark.sql.Dataset)
   CollReduce
   (coll-reduce
     ([data-set f]

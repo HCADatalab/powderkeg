@@ -5,6 +5,7 @@
     [powderkeg.ouroboros :as ou] ; must be first
     [powderkeg.kryo :as kryo]
     [powderkeg.pool :as pool]
+    [powderkeg.macros :refer [compile-cond]]
     [cemerick.pomegranate.aether :as mvn]
     [clojure.core :as clj]
     [clojure.java.io :as io]
@@ -81,16 +82,6 @@
 
 (defn- has-method? [^Class class msig]
   (some #(unify-sigs msig (sig %)) (concat (.getMethods class) (.getConstructors class))))
-
-(defmacro ^:private compile-cond [& choices]
-  (let [x (Object.)
-        expr
-        (reduce (fn [x [test expr]]
-                  (if (eval test) (reduced expr) x))
-          x (partition 2 choices))]
-    (when (= x expr)
-      (throw (ex-info "No valid choice." {:form &form})))
-    expr))
 
 (defn- all-files
   "Returns a map of relative paths (as Strings) to Files for all files (not directories) below the argument."
