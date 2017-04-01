@@ -1,9 +1,11 @@
-(defproject hcadatalab/powderkeg "0.5.0"
+(defproject hcadatalab/powderkeg "0.5.1"
   :description "Live-coding Spark clusters!"
   :url "https://github.com/HCADatalab/powderkeg"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :aliases {"test-all" ["with-profile" "spark1.5:spark2" "test"]}
+  :aliases {"test-all-local" ["with-profile" "spark1.5:spark2" "run" "-m" "powderkeg.runner/run-tests-local-spark"]
+            "test-all-1.5" ["with-profile" "spark1.5" "run" "-m" "powderkeg.runner/run-tests-foreign-spark-1.5"]
+            "test-all-2.1" ["with-profile" "spark2" "run" "-m" "powderkeg.runner/run-tests-foreign-spark-2.1"]}
   :test-selectors {:default (complement :integration)
                    :integration :integration}
   :profiles {:default [:spark2]
