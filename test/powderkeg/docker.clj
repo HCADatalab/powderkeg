@@ -1,10 +1,19 @@
-(ns powderkeg.integration-test
+(ns powderkeg.docker
   (:require [powderkeg.core :as keg]
-            [powderkeg.fixtures :refer [with-resources clojure-dynamic-classloader]]
-            [powderkeg.asserts :refer [example-asserts]]
             [clojure.test :refer :all]
             [clojure.java.shell :refer [sh]]
             [clojure.string :as s]))
+
+(defmacro timing [log-prefix & body]
+  `(do
+     (println (str ~log-prefix " starting"))
+     (let [start# (System/currentTimeMillis)
+           result# (do ~@body)
+           end# (System/currentTimeMillis)
+           duration# (- end# start#)]
+       (println (str ~log-prefix " took: " (- end# start#) "ms" ))
+       {:result result#
+        :duration duration#})))
 
 (defn sh! [& args]
   (let [{:keys [exit out err] :as ret} (apply sh args)]
@@ -61,11 +70,13 @@
   (when-not (System/getenv "CIRCLECI")
     (sh! "docker" "rm" instance)))
 
-(defn start-spark [version]
+(defn start-cluster [version]
   (let [pwd (.getAbsolutePath (java.io.File. ""))]
-    (start-master pwd version)
+    (timing "Master startup"
+      (start-master pwd version))
     (Thread/sleep 2000)
-    (start-worker pwd version)
+    (timing "Worker startup"
+      (start-worker pwd version))
     (Thread/sleep 2000)))
 
 (defn stop-cluster [version]
@@ -74,24 +85,6 @@
 
 (defn spark [version]
   (fn []
-    (start-spark version)
-    #(stop-cluster version)))
-
-(defn keg-connection [host]
-  (fn []
-    (keg/connect! (str "spark://" host ":7077"))
-    #(keg/disconnect!)))
-
-(deftest ^:integration rdd-spark-2.1.0
-  (with-resources
-    [(spark "2.1.0-hadoop-2.7")
-     clojure-dynamic-classloader
-     (keg-connection "localhost")]
-    (example-asserts)))
-
-(deftest ^:integration rdd-spark-1.5.2
-  (with-resources
-    [(spark "1.5.2-hadoop-2.6")
-     clojure-dynamic-classloader
-     (keg-connection "master")]
-    (example-asserts)))
+    (start-cluster version)
+    #(timing "Cluster shutdown"
+       (stop-cluster version))))
