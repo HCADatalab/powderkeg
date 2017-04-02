@@ -27,6 +27,7 @@ Then launch a repl (eg `lein repl`):
 
 ```clj
 (require '[powderkeg.core :as keg])
+(require '[net.cgrand.xforms :as x])
 
 (keg/connect! "spark://macbook-pro.home:7077") ; change uri, "local[2]" can do but that's no fun...
 
