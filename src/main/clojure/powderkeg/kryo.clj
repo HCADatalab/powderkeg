@@ -5,6 +5,10 @@
 (defn serializer [read write]
   (powderkeg.SerializerStub. read write))
 
+(defn- serializer-factory [f]
+ (reify com.esotericsoftware.kryo.factories.SerializerFactory
+   (makeSerializer [factory kryo class] (f kryo class))))
+
 (def default-serializers
   {clojure.lang.ITransientCollection
    (serializer
@@ -35,12 +39,18 @@
            com.esotericsoftware.kryo.util.Util/getWrapperClass)))
      (fn write [_ ^com.esotericsoftware.kryo.Kryo kryo ^com.esotericsoftware.kryo.io.Output output ^Class class]
        (.writeClass kryo output class)
-       (.writeByte output (if (some-> class .isPrimitive) 1 0))))})
+       (.writeByte output (if (some-> class .isPrimitive) 1 0))))
+   java.util.Collection
+    (serializer-factory
+      (fn [kryo ^Class class]
+        (if (try (.getDeclaredConstructor class (into-array Class nil)) (catch NoSuchMethodException _ nil))
+          (com.esotericsoftware.kryo.serializers.CollectionSerializer.)
+          (com.esotericsoftware.kryo.serializers.FieldSerializer. kryo class))))})
 
 (def void-serializer (serializer (fn [_ _ _ _]) (fn [_ _ _ _])))
 
 (defn register-default-serializers [^com.esotericsoftware.kryo.Kryo kryo m]
-  (doseq [[^Class class ^com.esotericsoftware.kryo.Serializer serializer] m]
+  (doseq [[^Class class serializer] m]
     (.addDefaultSerializer kryo class serializer)))
 
 (defn customizer [^com.esotericsoftware.kryo.Kryo kryo]
