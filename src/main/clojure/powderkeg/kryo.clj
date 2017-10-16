@@ -9,6 +9,13 @@
  (reify com.esotericsoftware.kryo.factories.SerializerFactory
    (makeSerializer [factory kryo class] (f kryo class))))
 
+(def charset-serializer
+  (serializer
+    (fn read-charset [_ ^com.esotericsoftware.kryo.Kryo kryo ^com.esotericsoftware.kryo.io.Input input class]
+      (java.nio.charset.Charset/forName (.readString input)))
+    (fn write-charset [_ ^com.esotericsoftware.kryo.Kryo kryo ^com.esotericsoftware.kryo.io.Output output ^java.nio.charset.Charset cs]
+       (.writeString output (.name cs)))))
+
 (def default-serializers
   {clojure.lang.ITransientCollection
    (serializer
@@ -41,11 +48,13 @@
        (.writeClass kryo output class)
        (.writeByte output (if (some-> class .isPrimitive) 1 0))))
    java.util.Collection
-    (serializer-factory
-      (fn [kryo ^Class class]
-        (if (try (.getDeclaredConstructor class (into-array Class nil)) (catch NoSuchMethodException _ nil))
-          (com.esotericsoftware.kryo.serializers.CollectionSerializer.)
-          (com.esotericsoftware.kryo.serializers.FieldSerializer. kryo class))))})
+   (serializer-factory
+     (fn [kryo ^Class class]
+       (if (try (.getDeclaredConstructor class (into-array Class nil)) (catch NoSuchMethodException _ nil))
+         (com.esotericsoftware.kryo.serializers.CollectionSerializer.)
+         (com.esotericsoftware.kryo.serializers.FieldSerializer. kryo class))))
+   java.nio.charset.Charset
+   (serializer-factory (constantly charset-serializer))})
 
 (def void-serializer (serializer (fn [_ _ _ _]) (fn [_ _ _ _])))
 
