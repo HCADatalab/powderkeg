@@ -59,9 +59,9 @@ Powderkeg had been tested against standalone and YARN clusters.
 
 You can also use `./spark-submit --master spark:... --class powderkeg.repl your.jar`.
 
-Applications should use:
+For a socket repl, use: `./spark-submit --conf 'spark.driver.extraJavaOptions=-Dclojure.server.repl="{:port 5555 :accept clojure.core.server/repl}"' --master spark:... --class powderkeg.repl your.jar`
 
-`./spark-submit --master spark:... --class powderkeg.repl your.jar your.ns/main-fn app-arg0 ...`.
+Applications should use: `./spark-submit --master spark:... --class powderkeg.repl your.jar your.ns/main-fn app-arg0 ...`.
 
 Where `your.ns/main-fn` is a vararg function (which receives arguments as strings) and the entry point of the application. `*sc*` will be bound.
 
