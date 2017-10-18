@@ -365,7 +365,7 @@
                     (has-method? org.apache.spark.api.java.function.FlatMapFunction '[java.util.Iterator "call" [?]])
                     ((df) it)
                     (has-method? org.apache.spark.api.java.function.FlatMapFunction '[java.lang.Iterable "call" [?]])
-                    (reify java.util.Iterable
+                    (reify java.lang.Iterable
                       (iterator [_] ((df) it))))))
               preserve-partitioning)]
     rdd))
