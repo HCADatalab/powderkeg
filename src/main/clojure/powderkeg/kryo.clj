@@ -54,7 +54,7 @@
          (com.esotericsoftware.kryo.serializers.CollectionSerializer.)
          (com.esotericsoftware.kryo.serializers.FieldSerializer. kryo class))))
    java.nio.charset.Charset
-   (serializer-factory (constantly charset-serializer))})
+   charset-serializer})
 
 (def void-serializer (serializer (fn [_ _ _ _]) (fn [_ _ _ _])))
 
