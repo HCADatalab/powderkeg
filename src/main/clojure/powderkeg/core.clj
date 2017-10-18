@@ -330,34 +330,12 @@
   ([src options]
     (-rdd src (:sc options *sc*) options)))
 
-(defn- iterator
-  "Iterator transducing context"
-  [xform ^java.util.Iterator src-iterator]
-  (let [NULL (Object.)
-        dq (java.util.ArrayDeque. 32)
-        rf (xform (fn ([acc] acc) ([acc x] (.push dq (if (some? x) x NULL)) acc)))
-        vopen (volatile! true)
-        ensure-next #(or (some? (.peek dq))
-                       (if (and @vopen (.hasNext src-iterator))
-                         (let [acc (rf nil (.next src-iterator))]
-                           (when (reduced? acc) (vreset! vopen false))
-                           (recur))
-                         false))]
-    (reify java.util.Iterator
-      (hasNext [_]
-        (ensure-next))
-      (next [_]
-        (if (ensure-next)
-          (let [x (.poll dq)]
-            (if (identical? NULL x) nil x))
-          (throw (java.util.NoSuchElementException.)))))))
-
 (defn ^org.apache.spark.api.java.JavaRDD rdd*
   "Like rdd without the mixed varargs."
   [src xform options-map]
   (let [{:keys [preserve-partitioning] :or {preserve-partitioning false} :as options} options-map
         rdd (ensure-rdd src options)
-        df (barrier-fn (fn [it] (iterator (comp may-unmap-tuple2 xform may-map-tuple2) it)))
+        df (barrier-fn (fn [it] (x/iterator (comp may-unmap-tuple2 xform may-map-tuple2) it)))
         rdd (.mapPartitions rdd
               (reify org.apache.spark.api.java.function.FlatMapFunction ; todo: skip api.java.* go to spark
                 (call [_ it] 
@@ -379,7 +357,7 @@
   "Like rdd* but for forcing computation."
   [src xform options]
   (let [rdd (ensure-rdd src options)
-        df (barrier-fn (fn [it] (consume-iterator (iterator (comp may-unmap-tuple2 xform) it))))
+        df (barrier-fn (fn [it] (consume-iterator (x/iterator (comp may-unmap-tuple2 xform) it))))
         rdd (.foreachPartition rdd
               (reify org.apache.spark.api.java.function.VoidFunction ; todo: skip api.java.* go to spark
                 (call [_ it] ((df) it))))]
