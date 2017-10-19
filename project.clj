@@ -20,7 +20,7 @@
              :kryo-3 {:dependencies [[com.esotericsoftware/kryo-shaded "3.0.3"]]}
              :kryo-4 {:dependencies [[com.esotericsoftware/kryo-shaded "4.0.0"]]}}
   :dependencies [[org.clojure/clojure "1.8.0"]
-                 [net.cgrand/xforms "0.12.1"]
+                 [net.cgrand/xforms "0.12.2"]
                  [com.twitter/carbonite "1.4.0" :exclusions [com.twitter/chill-java com.esotericsoftware.kryo/kryo]]
                  [com.cemerick/pomegranate "0.3.0"]]
   :aot [powderkeg.repl]
