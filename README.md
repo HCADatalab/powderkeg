@@ -66,7 +66,7 @@ Applications should use: `./spark-submit --master spark:... --class powderkeg.re
 Where `your.ns/main-fn` is a vararg function (which receives arguments as strings) and the entry point of the application. `*sc*` will be bound.
 
 ### Creating a RDD 
-Currently one can only creates a RDD from a collection (including `nil`) or another RDD (either returned by a keg function or by good old interop).
+Currently one can only create a RDD from a collection (including `nil`) or another RDD (either returned by a keg function or by good old interop).
 
 To add a new kind of source for RDDs, one has to extend the `RDDable` protocol.
 
@@ -91,10 +91,10 @@ RDDs can be reduced so all you have to do is call `into` on them.
 ;=> [0 1 2 3 4 5 6 7 8 9]
 ``` 
 
-You may encounter erroneous results with some stateful transducers. However if it's from a very narrow class of stateful transducers: stateful transducers which calls the underlying reducing function on completion (eg `partition-by`). Furthermore you usually don't want to perform expensive computation (and data transfer) on the driver, so most of the time the only transducers you want to use with `into` is `take`. Others tend to be best pushed into the RDD.
+You may encounter erroneous results with some stateful transducers. However, it's from a very narrow class of stateful transducers: stateful transducers which call the underlying reducing function on completion (eg `partition-by`). Furthermore you usually don't want to perform expensive computation (and data transfer) on the driver, so most of the time the only transducers you want to use with `into` is `take`. Others tend to be best pushed into the RDD.
 
 This being said if you really have to use a "flushing" transducer then you to work around the issue by either using `scomp` instead of `comp`
-to create a transducer whose reducing functions states will be correctly passed around cluster nodes. Or by using `keg/into` which is really
+to create a transducer whose reducing function's states will be correctly passed around cluster nodes, or by using `keg/into` which is really
 just `into` with implicit `scomp`.
 
 ```clj
